@@ -1,0 +1,12 @@
+{
+    "name": "agent-app-ci",
+    "private": true,
+    "type": "module",
+    "dependencies": {
+        "@chamvi/app": "^0.2.0",
+        "@chamvi/cli": "^0.2.0",
+        "ai": "^7.0.146",
+        "pg": "^8",
+        "typeorm": "^1.1.2"
+    }
+}

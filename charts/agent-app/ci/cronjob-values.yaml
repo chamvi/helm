@@ -1,4 +1,4 @@
-# Render-only until a fixture image and shared PostgreSQL store are supplied.
+# CronJob mode with the fixture app; the kind smoke runs the job (MemoryStore per pod, ci only).
 image:
     repository: chamvi-ci/app
     tag: ci

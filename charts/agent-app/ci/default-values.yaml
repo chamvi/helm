@@ -1,4 +1,5 @@
-# Local render fixture; the image and Secret must exist before installation.
+# Baseline: the fixture app (ci/app, loaded into kind), MemoryStore, static tokens from ci/manifests.
+# The stray global key guards umbrella use: the schema must accept globals it does not declare.
 global:
     umbrellaProbe: parent-injected
 image:

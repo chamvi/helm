@@ -1,3 +1,4 @@
+# basePath, Ingress and the derived CHAMVI_PUBLIC_URL; the ServiceMonitor is skipped on kind (no API).
 image:
     repository: chamvi-ci/app
     tag: ci
@@ -7,3 +8,5 @@ basePath: /agents
 ingress:
     enabled: true
     host: agents.ci.local
+serviceMonitor:
+    enabled: true
