@@ -2,9 +2,10 @@
 """Fail when a template references a .Values path absent from values.yaml.
 
 Adapted from authup/helm/scripts/check-values-coverage.py. A reference resolves
-when every segment walks through the parsed values tree. Empty maps and
-non-mapping leaves cover dynamic access beneath them. This audits literal
-.Values references only, not aliases or computed index expressions.
+when every segment walks through the parsed values tree. Empty maps cover
+dynamic access beneath them; a path that continues beneath a scalar or null
+fails, since a template cannot read a field of it. This audits literal .Values
+references only, not aliases or computed index expressions.
 """
 import re
 import sys
@@ -33,6 +34,7 @@ for ref in sorted(refs):
                 failures.append(ref)
                 break
         else:
+            failures.append(ref)
             break
 
 if failures:

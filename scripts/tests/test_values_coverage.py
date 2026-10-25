@@ -23,5 +23,17 @@ class ValuesCoverage(unittest.TestCase):
             self.assertIn("image.repository", result.stdout)
 
 
+    def test_a_path_beneath_a_scalar_fails(self):
+        with tempfile.TemporaryDirectory() as folder:
+            chart = Path(folder)
+            (chart / "templates").mkdir()
+            (chart / "values.yaml").write_text("image:\n  tag: test\nresources: null\n")
+            template = chart / "templates/example.tpl"
+            for ref in ("image.tag.extra", "resources.limits"):
+                template.write_text("{{ .Values.%s }}" % ref)
+                result = subprocess.run(["python3", str(SCRIPT), str(chart)], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 1, ref)
+                self.assertIn(ref, result.stdout)
+
 if __name__ == "__main__":
     unittest.main()
