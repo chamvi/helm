@@ -47,9 +47,10 @@ unittest:
 contract:
 	python3 -m unittest discover -s scripts/tests -v
 
-## Build the fixture app image (published @chamvi packages) and run the contract suite against it.
+## Build the fixture app image without cache (so it installs the currently published @chamvi packages) and run the
+## contract suite against it.
 fixture:
-	docker build -t chamvi-ci/app:ci ci/app
+	docker build --pull --no-cache -t chamvi-ci/app:ci ci/app
 	AGENT_APP_CI_IMAGE=chamvi-ci/app:ci python3 -m unittest discover -s scripts/tests -v
 
 template:
