@@ -1,10 +1,10 @@
 # yaml-language-server: $schema=values.schema.json
 
-# -- Free-form umbrella chart values.
 # @schema
 # type: object
 # additionalProperties: true
 # @schema
+# -- Free-form umbrella chart values.
 global: {}
 
 # -- Override the chart name (DNS label, at most 63 characters).
@@ -21,15 +21,14 @@ image:
     tag: ''
     # -- Optional sha256 digest, preferred over the tag.
     digest: ''
-    # -- Image pull policy.
     # @schema
     # enum:
     # - Always
     # - IfNotPresent
     # - Never
     # @schema
+    # -- Image pull policy.
     pullPolicy: IfNotPresent
-# -- Existing registry credentials for private agent images only.
 # @schema
 # type: array
 # items:
@@ -42,17 +41,17 @@ image:
 #       type: string
 #       minLength: 1
 # @schema
+# -- Existing registry credentials for private agent images only.
 imagePullSecrets: []
 
-# -- Application replicas; more than one requires a shared database.
 # @schema
 # type: integer
 # minimum: 1
 # maximum: 2147483647
 # @schema
+# -- Application replicas; more than one requires a shared database.
 replicas: 1
 
-# -- Deployment strategy; RollingUpdate may set rollingUpdate options.
 # @schema
 # type: object
 # additionalProperties: true
@@ -63,11 +62,11 @@ replicas: 1
 #     - Recreate
 #     - RollingUpdate
 # @schema
+# -- Deployment strategy; RollingUpdate may set rollingUpdate options.
 strategy:
     # -- Recreate by default; RollingUpdate supports rollingUpdate options.
     type: Recreate
 
-# -- CLI prefix rendered as args, preserving the image entrypoint.
 # @schema
 # type: array
 # minItems: 1
@@ -75,6 +74,7 @@ strategy:
 #   type: string
 #   minLength: 1
 # @schema
+# -- CLI prefix. Rendered as the container args (never `command:`), so the image's tini entrypoint stays PID 1: the Deployment runs `command + [start]`, a CronJob `command + [run-job, agent, subscription]`.
 command:
 - node
 - node_modules/@chamvi/cli/dist/cli.mjs
@@ -82,7 +82,6 @@ command:
 # -- HTTP prefix, empty or lower-case /segment paths without a trailing slash.
 basePath: ''
 
-# -- Plain environment values, never credentials; use secrets for sensitive values.
 # @schema
 # type: object
 # additionalProperties:
@@ -92,9 +91,9 @@ basePath: ''
 #   - number
 #   - boolean
 # @schema
+# -- Plain environment values, never credentials; use secrets for sensitive values.
 env: {}
 
-# -- Existing Secret names used as envFrom; this chart creates no Secrets.
 # @schema
 # type: array
 # uniqueItems: true
@@ -102,27 +101,27 @@ env: {}
 #   type: string
 #   minLength: 1
 # @schema
+# -- Existing Secret names, each mounted through envFrom on every pod (DATABASE_URL, CHAMVI_TOKENS, provider API keys, GITHUB_*); this chart creates no Secret.
 secrets: []
 
-# -- Pod shutdown grace; must exceed preStop plus CLI force-exit timeout.
 # @schema
 # type: integer
 # minimum: 1
 # maximum: 2147483647
 # @schema
+# -- Pod shutdown grace; must exceed preStop plus CLI force-exit timeout.
 terminationGracePeriodSeconds: 120
 
-# -- Native preStop sleep on the Deployment; zero omits the lifecycle.
 # @schema
 # type: integer
 # minimum: 0
 # maximum: 2147483647
 # @schema
+# -- Native preStop sleep on the Deployment; zero omits the lifecycle.
 preStopSleepSeconds: 5
 
 # -- HTTP probes share the basePath and named http port.
 probes:
-    # -- Startup HTTP probe timings; additional Kubernetes timing fields are accepted.
     # @schema
     # type: object
     # additionalProperties: true
@@ -140,6 +139,7 @@ probes:
     #     minimum: 1
     #     maximum: 2147483647
     # @schema
+    # -- Startup HTTP probe timings; additional Kubernetes timing fields are accepted.
     startup:
         # -- Seconds between startup checks.
         periodSeconds: 2
@@ -147,7 +147,6 @@ probes:
         failureThreshold: 60
         # -- Startup request timeout in seconds.
         timeoutSeconds: 2
-    # -- Liveness HTTP probe timings; additional Kubernetes timing fields are accepted.
     # @schema
     # type: object
     # additionalProperties: true
@@ -165,6 +164,7 @@ probes:
     #     minimum: 1
     #     maximum: 2147483647
     # @schema
+    # -- Liveness HTTP probe timings; additional Kubernetes timing fields are accepted.
     liveness:
         # -- Seconds between liveness checks.
         periodSeconds: 10
@@ -172,7 +172,6 @@ probes:
         failureThreshold: 3
         # -- Liveness request timeout in seconds.
         timeoutSeconds: 2
-    # -- Readiness HTTP probe timings; additional Kubernetes timing fields are accepted.
     # @schema
     # type: object
     # additionalProperties: true
@@ -190,6 +189,7 @@ probes:
     #     minimum: 1
     #     maximum: 2147483647
     # @schema
+    # -- Readiness HTTP probe timings; additional Kubernetes timing fields are accepted.
     readiness:
         # -- Seconds between readiness checks.
         periodSeconds: 5
@@ -197,51 +197,51 @@ probes:
         failureThreshold: 2
         # -- Readiness request timeout in seconds.
         timeoutSeconds: 2
-# -- Application resource requests and limits.
 # @schema
 # type: object
 # additionalProperties: true
 # @schema
+# -- Application resource requests and limits.
 resources: {}
 
-# -- Annotations for application and job pods.
 # @schema
 # type: object
 # additionalProperties:
 #   type: string
 # @schema
+# -- Annotations for application and job pods.
 podAnnotations: {}
 
-# -- Extra pod labels; chart labels and the cron-job label are reserved.
 # @schema
 # type: object
 # additionalProperties:
 #   type: string
 # @schema
+# -- Extra pod labels; chart labels and the cron-job label are reserved.
 podLabels: {}
 
-# -- Node selector for application and job pods.
 # @schema
 # type: object
 # additionalProperties:
 #   type: string
 # @schema
+# -- Node selector for application and job pods.
 nodeSelector: {}
 
-# -- Kubernetes tolerations.
 # @schema
 # type: array
 # items:
 #   type: object
 #   additionalProperties: true
 # @schema
+# -- Kubernetes tolerations.
 tolerations: []
 
-# -- Kubernetes scheduling affinity.
 # @schema
 # type: object
 # additionalProperties: true
 # @schema
+# -- Kubernetes scheduling affinity.
 affinity: {}
 
 # -- Application ServiceAccount settings.
@@ -250,36 +250,36 @@ serviceAccount:
     create: true
     # -- Existing or custom ServiceAccount name; empty chooses the release name or default.
     name: ''
-    # -- ServiceAccount annotations.
     # @schema
     # type: object
     # additionalProperties:
     #   type: string
     # @schema
+    # -- ServiceAccount annotations.
     annotations: {}
 # -- Application Service settings.
 service:
-    # -- Service type.
     # @schema
     # enum:
     # - ClusterIP
     # - NodePort
     # - LoadBalancer
     # @schema
+    # -- Service type.
     type: ClusterIP
-    # -- Service port, targeting the named http container port.
     # @schema
     # type: integer
     # minimum: 1
     # maximum: 65535
     # @schema
+    # -- Service port, targeting the named http container port.
     port: 80
-    # -- Service annotations.
     # @schema
     # type: object
     # additionalProperties:
     #   type: string
     # @schema
+    # -- Service annotations.
     annotations: {}
 # -- Optional Ingress and public URL derivation.
 ingress:
@@ -289,18 +289,17 @@ ingress:
     className: ''
     # -- Concrete DNS host, required when ingress is enabled.
     host: ''
-    # -- Ingress controller annotations.
     # @schema
     # type: object
     # additionalProperties:
     #   type: string
     # @schema
+    # -- Ingress controller annotations.
     annotations: {}
     # -- TLS settings.
     tls:
         # -- TLS Secret name; enables HTTPS origin derivation.
         secretName: ''
-# -- Cron subscriptions fired by Kubernetes instead of the in-process scheduler.
 # @schema
 # type: array
 # items:
@@ -324,60 +323,61 @@ ingress:
 #     suspend:
 #       type: boolean
 # @schema
+# -- run-job CronJobs, one per agent `cron.on()` subscription (`name`, `schedule`, `agent`, optional `subscription` id such as `cron:0 7 * * *`, `timeZone`, `suspend`). Any entry sets `CHAMVI_SCHEDULER=false` on the Deployment, so mirror every cron subscription.
 cronJobs: []
 
 # -- Defaults shared by every run-job CronJob.
 cronJob:
-    # -- Deadline for starting a missed schedule.
     # @schema
     # type: integer
     # minimum: 1
     # maximum: 2147483647
     # @schema
+    # -- Deadline for starting a missed schedule.
     startingDeadlineSeconds: 300
+    # @schema
+    # type: integer
+    # minimum: 0
+    # maximum: 2147483647
+    # @schema
     # -- Completed Jobs retained.
-    # @schema
-    # type: integer
-    # minimum: 0
-    # maximum: 2147483647
-    # @schema
     successfulJobsHistoryLimit: 3
+    # @schema
+    # type: integer
+    # minimum: 0
+    # maximum: 2147483647
+    # @schema
     # -- Failed Jobs retained.
-    # @schema
-    # type: integer
-    # minimum: 0
-    # maximum: 2147483647
-    # @schema
     failedJobsHistoryLimit: 3
-    # -- Job lifetime limit; zero leaves it unset.
     # @schema
     # type: integer
     # minimum: 0
     # maximum: 2147483647
     # @schema
+    # -- Job lifetime limit; zero leaves it unset.
     activeDeadlineSeconds: 0
-    # -- Job resources; empty inherits application resources.
     # @schema
     # type: object
     # additionalProperties: true
     # @schema
+    # -- Job resources; empty inherits application resources.
     resources: {}
-# -- Kubernetes sandbox integration; RBAC and policies are added by the security layer.
+# -- Kubernetes sandbox pods (`@chamvi/sandbox-k8s`): a Role and RoleBinding in `sandbox.namespace`, the egress policy, and `CHAMVI_SANDBOX_NAMESPACE` on the app.
 sandbox:
-    # -- Mount the app service account token for the Kubernetes sandbox provider.
+    # -- Grant the app's ServiceAccount the sandbox Role and mount its token. Select the provider in the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or the module option).
     enabled: false
-    # -- Separate namespace for sandbox pods.
+    # -- Namespace of the sandbox pods; must exist and differ from the release namespace.
     namespace: ''
     # -- Sandbox egress controls.
     networkPolicy:
         # -- Create sandbox policy resources when sandbox is enabled.
         enabled: true
-        # -- Cluster CIDRs excluded from portable public HTTPS egress.
         # @schema
         # type: array
         # items:
         #   type: string
         # @schema
+        # -- Cluster CIDRs excluded from portable public HTTPS egress.
         clusterCIDRs:
         - 10.0.0.0/8
         - 172.16.0.0/12
@@ -385,32 +385,32 @@ sandbox:
         - 100.64.0.0/10
         # -- Selectors of DNS pods reachable by sandboxes.
         dns:
-            # -- DNS namespace labels.
             # @schema
             # type: object
             # additionalProperties:
             #   type: string
             # @schema
+            # -- DNS namespace labels.
             namespaceSelector:
                 kubernetes.io/metadata.name: kube-system
-            # -- DNS pod labels.
             # @schema
             # type: object
             # additionalProperties:
             #   type: string
             # @schema
+            # -- DNS pod labels.
             podSelector:
                 k8s-app: kube-dns
         # -- Optional Cilium replacement policy.
         cilium:
             # -- Use FQDN policy instead of the portable NetworkPolicy.
             enabled: false
-            # -- Allowed HTTPS DNS names and patterns.
             # @schema
             # type: array
             # items:
             #   type: string
             # @schema
+            # -- Allowed HTTPS DNS names and patterns.
             fqdns:
             - github.com
             - '*.github.com'
@@ -424,14 +424,13 @@ serviceMonitor:
     interval: ''
     # -- Prometheus scrape timeout; empty uses its default.
     scrapeTimeout: ''
-    # -- Additional ServiceMonitor labels.
     # @schema
     # type: object
     # additionalProperties:
     #   type: string
     # @schema
+    # -- Additional ServiceMonitor labels.
     labels: {}
-# -- Enable the Helm readiness test hook.
 # @schema
 # type: object
 # additionalProperties: false
@@ -439,5 +438,6 @@ serviceMonitor:
 #   enabled:
 #     type: boolean
 # @schema
+# -- Enable the Helm readiness test hook.
 tests:
     enabled: true

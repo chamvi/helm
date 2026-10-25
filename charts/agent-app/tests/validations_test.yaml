@@ -85,3 +85,24 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: "podLabels may not set app.kubernetes.io/component"
+  - it: refuses an unknown top-level key through the schema
+    values: [values/base.yaml]
+    set:
+      replicass: 2
+    asserts:
+      - failedTemplate:
+          errorPattern: "additional properties 'replicass'"
+  - it: refuses an unknown nested key through the schema
+    values: [values/base.yaml]
+    set:
+      service.porrt: 8080
+    asserts:
+      - failedTemplate:
+          errorPattern: "additional properties 'porrt'"
+  - it: refuses a negative replica count through the schema
+    values: [values/base.yaml]
+    set:
+      replicas: 0
+    asserts:
+      - failedTemplate:
+          errorPattern: "replicas"

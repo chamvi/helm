@@ -31,12 +31,12 @@ def unique_mapping(loader, node):
 UniqueLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, unique_mapping)
 
 
-def render(values=None, release="demo", chart=CHART):
+def render(values=None, release="demo", chart=CHART, extra=()):
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml") as file:
         yaml.safe_dump({**BASE, **(values or {})}, file)
         file.flush()
         return subprocess.run(
-            ["helm", "template", release, str(chart), "--namespace", "agents", "-f", file.name],
+            ["helm", "template", release, str(chart), "--namespace", "agents", "-f", file.name, *extra],
             capture_output=True, text=True,
         )
 
@@ -91,12 +91,16 @@ class ChartContract(unittest.TestCase):
             ({"probes": {"liveness": {"exec": {"command": ["true"]}}}}, "probes.liveness"),
             ({"probes": {"startup": {"periodSeconds": 0}}}, "probes.startup"),
         ]
+        # The schema answers first (a JSON pointer); the template guards must still hold
+        # for a render that skips it (helm --skip-schema-validation).
         for values, field in cases:
-            with self.subTest(values=values):
-                result = render(values)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn(field, result.stderr)
-                self.assertNotIn("sensitive-sentinel", result.stderr)
+            for extra in ((), ("--skip-schema-validation",)):
+                with self.subTest(values=values, extra=extra):
+                    result = render(values, extra=extra)
+                    self.assertNotEqual(result.returncode, 0)
+                    names = (field,) if extra else (field, "/" + field.replace(".", "/"))
+                    self.assertTrue(any(n in result.stderr for n in names), result.stderr)
+                    self.assertNotIn("sensitive-sentinel", result.stderr)
 
     def test_cron_validation_and_conditional_owned_env(self):
         job = {"name": "digest", "agent": "digest", "schedule": "0 7 * * *"}
@@ -213,20 +217,23 @@ class ChartContract(unittest.TestCase):
             self.assertEqual(len(hooks), 1)
             self.assertEqual(hooks[0]["metadata"]["annotations"]["helm.sh/hook"], "test")
 
-    @unittest.skipUnless(os.environ.get("CHAMVI_APP_MODULE"), "set CHAMVI_APP_MODULE to a built app entry")
+    @unittest.skipUnless(os.environ.get("AGENT_APP_CI_IMAGE"), "set AGENT_APP_CI_IMAGE (make fixture builds chamvi-ci/app:ci)")
     def test_rendered_origin_builds_approval_link_with_one_base_path(self):
         docs = documents(render({"basePath": "/agents", "ingress": {"enabled": True, "host": "agents.example.com", "tls": {"secretName": "tls"}}}))
         env = next(d for d in docs if d["kind"] == "Deployment")["spec"]["template"]["spec"]["containers"][0]["env"]
         script = """
-            const { readConfig, approvalUrlOf } = await import(process.env.CHAMVI_APP_MODULE);
+            const { readConfig, approvalUrlOf } = await import('@chamvi/app');
             const env = JSON.parse(process.argv[1]);
             const config = readConfig(env, { mode: 'start', dev: false });
             console.log(approvalUrlOf(config)({runId:'run-1',approvalId:'0:call:0',agent:'digest'}));
         """
-        result = subprocess.run(["node", "--input-type=module", "-e", script, json.dumps({e["name"]: e["value"] for e in env})], capture_output=True, text=True)
+        result = subprocess.run(
+            ["docker", "run", "--rm", "-u", "1000:1000", os.environ["AGENT_APP_CI_IMAGE"],
+             "node", "--input-type=module", "-e", script, json.dumps({e["name"]: e["value"] for e in env})],
+            capture_output=True, text=True, timeout=120,
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "https://agents.example.com/agents/ui/approvals?run=run-1&approval=0%3Acall%3A0")
-
 
 if __name__ == "__main__":
     unittest.main()
