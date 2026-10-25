@@ -1,0 +1,12 @@
+# Local render fixture; the image and Secret must exist before installation.
+global:
+    umbrellaProbe: parent-injected
+image:
+    repository: chamvi-ci/app
+    tag: ci
+    pullPolicy: Never
+secrets: [agent-app-ci]
+resources:
+    requests:
+        cpu: 50m
+        memory: 128Mi

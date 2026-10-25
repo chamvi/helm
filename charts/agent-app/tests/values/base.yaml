@@ -1,0 +1,3 @@
+image:
+    repository: ghcr.io/acme/triage
+    tag: main-abc1234-1792540800

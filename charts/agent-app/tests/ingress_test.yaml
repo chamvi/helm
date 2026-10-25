@@ -1,0 +1,41 @@
+suite: ingress
+templates:
+  - templates/ingress.yaml
+  - templates/deployment.yaml
+release:
+  name: demo
+  namespace: agents
+values:
+  - values/base.yaml
+tests:
+  - it: renders nothing by default
+    template: templates/ingress.yaml
+    asserts:
+      - hasDocuments: { count: 0 }
+  - it: routes the host under basePath with TLS
+    set:
+      basePath: /agents
+      ingress: { enabled: true, className: nginx, host: agents.example.com, tls: { secretName: agents-tls } }
+    template: templates/ingress.yaml
+    asserts:
+      - equal: { path: spec.ingressClassName, value: nginx }
+      - equal: { path: 'spec.rules[0].host', value: agents.example.com }
+      - equal:
+          path: spec.rules[0].http.paths[0]
+          value: { path: /agents, pathType: Prefix, backend: { service: { name: demo-agent-app, port: { name: http } } } }
+      - equal: { path: spec.tls, value: [{ hosts: [agents.example.com], secretName: agents-tls }] }
+  - it: derives CHAMVI_PUBLIC_URL from the ingress
+    set:
+      basePath: /agents
+      ingress: { enabled: true, host: agents.example.com, tls: { secretName: agents-tls } }
+    template: templates/deployment.yaml
+    asserts:
+      - contains: { path: 'spec.template.spec.containers[0].env', content: { name: CHAMVI_PUBLIC_URL, value: "https://agents.example.com" } }
+  - it: keeps an explicit CHAMVI_PUBLIC_URL once
+    set:
+      ingress: { enabled: true, host: agents.example.com }
+      env: { CHAMVI_PUBLIC_URL: "https://agents.acme.dev" }
+    template: templates/deployment.yaml
+    asserts:
+      - contains: { path: 'spec.template.spec.containers[0].env', content: { name: CHAMVI_PUBLIC_URL, value: "https://agents.acme.dev" } }
+      - notContains: { path: 'spec.template.spec.containers[0].env', content: { name: CHAMVI_PUBLIC_URL, value: "http://agents.example.com" } }

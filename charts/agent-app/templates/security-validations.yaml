@@ -1,0 +1,36 @@
+{{- $v := .Values -}}
+{{- $np := $v.sandbox.networkPolicy -}}
+{{- range $path, $value := dict "sandbox.networkPolicy.enabled" $np.enabled "sandbox.networkPolicy.cilium.enabled" $np.cilium.enabled -}}
+{{- if not (kindIs "bool" $value) -}}{{- fail (printf "agent-app: %s must be a boolean." $path) -}}{{- end -}}
+{{- end -}}
+{{- if $v.sandbox.enabled -}}
+{{- if not $v.sandbox.namespace -}}{{- fail "agent-app: sandbox.enabled needs sandbox.namespace (sandbox pods run apart from the app)." -}}{{- end -}}
+{{- include "agent-app.dnsName" (dict "value" $v.sandbox.namespace "path" "sandbox.namespace") -}}
+{{- if or (gt (len $v.sandbox.namespace) 63) (contains "." $v.sandbox.namespace) -}}{{- fail "agent-app: sandbox.namespace must be a DNS label of at most 63 characters." -}}{{- end -}}
+{{- if eq $v.sandbox.namespace .Release.Namespace -}}{{- fail "agent-app: sandbox.namespace must differ from the release namespace; create a separate namespace." -}}{{- end -}}
+{{- if and (not $v.serviceAccount.create) (or (not $v.serviceAccount.name) (eq $v.serviceAccount.name "default")) -}}{{- fail "agent-app: the sandbox Role needs a dedicated ServiceAccount; create one or set serviceAccount.name." -}}{{- end -}}
+{{- end -}}
+{{- if not (kindIs "slice" $np.clusterCIDRs) -}}{{- fail "agent-app: sandbox.networkPolicy.clusterCIDRs must be an IPv4 CIDR list." -}}{{- end -}}
+{{- range $i, $cidr := $np.clusterCIDRs -}}
+{{- if not (and (kindIs "string" $cidr) (regexMatch "^([0-9]{1,3}\\.){3}[0-9]{1,3}/([0-9]|[12][0-9]|3[0-2])$" (toString $cidr))) -}}{{- fail (printf "agent-app: sandbox.networkPolicy.clusterCIDRs[%d] must be an IPv4 CIDR." $i) -}}{{- end -}}
+{{- range (splitList "." (first (splitList "/" $cidr))) -}}
+{{- if gt (int .) 255 -}}{{- fail (printf "agent-app: sandbox.networkPolicy.clusterCIDRs[%d] must contain IPv4 octets from 0 to 255." $i) -}}{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- range $key := list "namespaceSelector" "podSelector" -}}
+{{- include "agent-app.stringMapGuard" (dict "value" (index $np.dns $key) "path" (printf "sandbox.networkPolicy.dns.%s" $key)) -}}
+{{- if empty (index $np.dns $key) -}}{{- fail (printf "agent-app: sandbox.networkPolicy.dns.%s must not be empty; select DNS pods explicitly." $key) -}}{{- end -}}
+{{- end -}}
+{{- if $np.cilium.enabled -}}
+{{- if not (and $v.sandbox.enabled $np.enabled) -}}{{- fail "agent-app: cilium.enabled needs sandbox.networkPolicy.enabled and sandbox.enabled." -}}{{- end -}}
+{{- if not (.Capabilities.APIVersions.Has "cilium.io/v2/CiliumNetworkPolicy") -}}{{- fail "agent-app: sandbox.networkPolicy.cilium.enabled needs the cilium.io/v2 CiliumNetworkPolicy API in the cluster (render locally with --api-versions cilium.io/v2/CiliumNetworkPolicy)." -}}{{- end -}}
+{{- if not (and (kindIs "slice" $np.cilium.fqdns) (not (empty $np.cilium.fqdns))) -}}{{- fail "agent-app: sandbox.networkPolicy.cilium.fqdns must be a non-empty list." -}}{{- end -}}
+{{- range $np.cilium.fqdns -}}
+{{- if not (and (kindIs "string" .) (regexMatch "^(\\*\\.)?[a-z0-9]([a-z0-9.-]*[a-z0-9])?$" (toString .))) -}}{{- fail "agent-app: sandbox.networkPolicy.cilium.fqdns entries must be DNS names or leading wildcard patterns." -}}{{- end -}}
+{{- end -}}
+{{- if or (ne (len $np.dns.namespaceSelector) 1) (not (hasKey $np.dns.namespaceSelector "kubernetes.io/metadata.name")) -}}{{- fail "agent-app: Cilium DNS needs only kubernetes.io/metadata.name in sandbox.networkPolicy.dns.namespaceSelector." -}}{{- end -}}
+{{- end -}}
+{{- include "agent-app.stringMapGuard" (dict "value" $v.serviceMonitor.labels "path" "serviceMonitor.labels") -}}
+{{- range $key, $_ := $v.serviceMonitor.labels -}}
+{{- if has $key (list "helm.sh/chart" "app.kubernetes.io/name" "app.kubernetes.io/instance" "app.kubernetes.io/component" "app.kubernetes.io/managed-by") -}}{{- fail "agent-app: serviceMonitor.labels must not override chart-owned labels." -}}{{- end -}}
+{{- end -}}

@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agent-app.fullname" . | quote }}
+  labels:
+    {{- include "agent-app.labels" (dict "context" . "component" "app") | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "agent-app.selectorLabels" (dict "context" . "component" "app") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agent-app.labels" (dict "context" . "component" "app") | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- include "agent-app.stringMap" . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- include "agent-app.stringMap" . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- include "agent-app.podCommon" (dict "context" . "test" false) | nindent 6 }}
+      containers:
+        - name: app
+          {{- include "agent-app.containerCommon" (dict "context" . "test" false) | nindent 10 }}
+          args:
+            {{- toYaml (concat .Values.command (list "start")) | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if gt (int .Values.preStopSleepSeconds) 0 }}
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: {{ .Values.preStopSleepSeconds }}
+          {{- end }}
+          {{- range $name, $probe := .Values.probes }}
+          {{ $name }}Probe:
+            httpGet:
+              path: {{ printf "%s/%s" (include "agent-app.basePath" $) (ternary "readyz" "healthz" (eq $name "readiness")) | quote }}
+              port: http
+            {{- toYaml $probe | nindent 12 }}
+          {{- end }}

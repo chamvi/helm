@@ -1,0 +1,23 @@
+suite: test-hook
+templates:
+  - templates/tests/test-readyz.yaml
+release:
+  name: demo
+  namespace: agents
+values:
+  - values/base.yaml
+tests:
+  - it: probes /readyz through the Service with the app image
+    set: { basePath: /agents }
+    asserts:
+      - isKind: { of: Pod }
+      - equal: { path: 'metadata.annotations["helm.sh/hook"]', value: test }
+      - equal: { path: 'spec.containers[0].image', value: ghcr.io/acme/triage:main-abc1234-1792540800 }
+      - equal: { path: 'spec.containers[0].args[0]', value: node }
+      - matchRegex: { path: 'spec.containers[0].args[2]', pattern: "http://demo-agent-app:80/agents/readyz" }
+      - notExists: { path: 'spec.containers[0].command' }
+      - equal: { path: spec.securityContext.runAsUser, value: 1000 }
+  - it: can be turned off
+    set: { tests.enabled: false }
+    asserts:
+      - hasDocuments: { count: 0 }

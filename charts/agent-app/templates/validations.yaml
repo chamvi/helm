@@ -1,0 +1,124 @@
+{{- $v := .Values -}}
+{{- range $path, $value := dict "sandbox.enabled" $v.sandbox.enabled "ingress.enabled" $v.ingress.enabled "serviceAccount.create" $v.serviceAccount.create "tests.enabled" $v.tests.enabled "serviceMonitor.enabled" $v.serviceMonitor.enabled -}}
+{{- if not (kindIs "bool" $value) -}}{{- fail (printf "agent-app: %s must be a boolean; use unquoted true or false." $path) -}}{{- end -}}
+{{- end -}}
+{{- if not (kindIs "slice" $v.imagePullSecrets) -}}{{- fail "agent-app: imagePullSecrets must be a list of name objects." -}}{{- end -}}
+{{- $pullSecrets := dict -}}
+{{- range $index, $secret := $v.imagePullSecrets -}}
+{{- if not (kindIs "map" $secret) -}}{{- fail "agent-app: imagePullSecrets entries must be name objects." -}}{{- end -}}
+{{- if ne (len $secret) 1 -}}{{- fail "agent-app: imagePullSecrets entries must contain only name." -}}{{- end -}}
+{{- include "agent-app.dnsName" (dict "value" $secret.name "path" (printf "imagePullSecrets[%d].name" $index)) -}}
+{{- if hasKey $pullSecrets $secret.name -}}{{- fail "agent-app: imagePullSecrets names must be unique." -}}{{- end -}}
+{{- $_ := set $pullSecrets $secret.name true -}}
+{{- end -}}
+{{- if not (has $v.strategy.type (list "Recreate" "RollingUpdate")) -}}{{- fail "agent-app: strategy.type must be Recreate or RollingUpdate." -}}{{- end -}}
+{{- if and (eq $v.strategy.type "Recreate") (hasKey $v.strategy "rollingUpdate") -}}{{- fail "agent-app: strategy.rollingUpdate requires strategy.type RollingUpdate; remove it for Recreate." -}}{{- end -}}
+{{- range $key, $_ := $v -}}
+{{- if not (has $key (list "global" "nameOverride" "fullnameOverride" "image" "imagePullSecrets" "replicas" "strategy" "command" "basePath" "env" "secrets" "terminationGracePeriodSeconds" "preStopSleepSeconds" "probes" "resources" "podAnnotations" "podLabels" "nodeSelector" "tolerations" "affinity" "serviceAccount" "service" "ingress" "cronJobs" "cronJob" "sandbox" "serviceMonitor" "tests")) -}}
+{{- fail (printf "agent-app: additional properties '%s' not allowed; check values.yaml." $key) -}}
+{{- end -}}
+{{- end -}}
+{{- if not $v.image.repository -}}{{- fail "agent-app: image.repository is required (the agent app image, e.g. ghcr.io/<owner>/<repo>)." -}}{{- end -}}
+{{- if not (or $v.image.tag $v.image.digest) -}}{{- fail "agent-app: set image.tag or image.digest." -}}{{- end -}}
+{{- range $key := list "repository" "tag" "digest" -}}
+{{- if not (kindIs "string" (index $v.image $key)) -}}{{- fail (printf "agent-app: image.%s must be a string; quote numeric tags." $key) -}}{{- end -}}
+{{- end -}}
+{{- if and $v.image.digest (not (regexMatch "^sha256:[a-f0-9]{64}$" $v.image.digest)) -}}{{- fail "agent-app: image.digest must be sha256:<64 hex>; use the published digest." -}}{{- end -}}
+{{- if not (has $v.image.pullPolicy (list "Always" "IfNotPresent" "Never")) -}}{{- fail "agent-app: image.pullPolicy must be Always, IfNotPresent or Never." -}}{{- end -}}
+{{- range $key := list "nameOverride" "fullnameOverride" -}}
+{{- $name := index $v $key -}}
+{{- if not (kindIs "string" $name) -}}{{- fail (printf "agent-app: %s must be a DNS label string." $key) -}}{{- end -}}
+{{- if and $name (or (gt (len $name) 63) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $name))) -}}{{- fail (printf "agent-app: %s must be a DNS label of at most 63 characters." $key) -}}{{- end -}}
+{{- end -}}
+{{/* Kubernetes 1.30 Services require RFC 1035 names, including an alphabetic first character. */}}
+{{- if not (regexMatch "^[a-z]" (include "agent-app.fullname" .)) -}}{{- fail "agent-app: fullnameOverride or the release-derived name must start with a letter for Service compatibility; set fullnameOverride." -}}{{- end -}}
+{{- if not (and (kindIs "string" $v.basePath) (regexMatch "^(/[a-z0-9._~-]+)*$" (toString $v.basePath))) -}}{{- fail "agent-app: basePath must be empty or /segment paths in lower case without a trailing slash." -}}{{- end -}}
+{{- if not (kindIs "map" $v.env) -}}{{- fail "agent-app: env must be a map; put credentials in secrets." -}}{{- end -}}
+{{- $owned := include "agent-app.ownedEnv" . | fromJsonArray -}}
+{{- range $key, $value := $v.env -}}
+{{- if not (regexMatch "^[A-Za-z_][A-Za-z0-9_]*$" $key) -}}{{- fail (printf "agent-app: env name %q is no valid variable name; use letters, digits and underscores." $key) -}}{{- end -}}
+{{- if has $key $owned -}}{{- fail (printf "agent-app: env.%s is set by the chart (PORT, CHAMVI_BASE_PATH, CHAMVI_SCHEDULER with cronJobs, CHAMVI_SANDBOX_NAMESPACE with sandbox.enabled); use the matching value instead." $key) -}}{{- end -}}
+{{- if not (has (kindOf $value) (list "string" "int" "int64" "float64" "float32" "bool")) -}}{{- fail (printf "agent-app: env.%s must be a scalar; use secrets for credentials." $key) -}}{{- end -}}
+{{- if contains "\u0000" (toString $value) -}}{{- fail (printf "agent-app: env.%s must not contain NUL." $key) -}}{{- end -}}
+{{- end -}}
+{{- $force := "90000" -}}
+{{- if hasKey $v.env "CHAMVI_FORCE_EXIT_MS" -}}
+{{- $input := toString $v.env.CHAMVI_FORCE_EXIT_MS -}}
+{{- if ne $input "" -}}
+{{- if not (regexMatch "^[0-9]+$" $input) -}}{{- fail "agent-app: env.CHAMVI_FORCE_EXIT_MS must be an integer in milliseconds." -}}{{- end -}}
+{{- if gt (float64 $input) 2147483647.0 -}}{{- fail "agent-app: env.CHAMVI_FORCE_EXIT_MS must be at most 2147483647; Node timers overflow above this limit." -}}{{- end -}}
+{{- $force = $input -}}
+{{- end -}}
+{{- end -}}
+{{- include "agent-app.integer" (dict "value" $v.replicas "path" "replicas" "min" 1 "max" 2147483647) -}}
+{{- include "agent-app.integer" (dict "value" $v.preStopSleepSeconds "path" "preStopSleepSeconds" "min" 0 "max" 2147483647) -}}
+{{- include "agent-app.integer" (dict "value" $v.terminationGracePeriodSeconds "path" "terminationGracePeriodSeconds" "min" 1 "max" 2147483647) -}}
+{{- if ge (add (mul (int64 $v.preStopSleepSeconds) 1000) (int64 $force)) (mul (int64 $v.terminationGracePeriodSeconds) 1000) -}}
+{{- fail (printf "agent-app: preStopSleepSeconds (%v s) + CHAMVI_FORCE_EXIT_MS (%s ms) must stay below terminationGracePeriodSeconds (%v s), or the kubelet kills the app before it drained." $v.preStopSleepSeconds $force $v.terminationGracePeriodSeconds) -}}
+{{- end -}}
+{{- if not (kindIs "slice" $v.secrets) -}}{{- fail "agent-app: secrets must be a list of existing Secret names." -}}{{- end -}}
+{{- $secrets := dict -}}
+{{- range $index, $name := $v.secrets -}}
+{{- include "agent-app.dnsName" (dict "value" $name "path" (printf "secrets[%d]" $index)) -}}
+{{- if hasKey $secrets $name -}}{{- fail "agent-app: secrets names must be unique; remove the duplicate reference." -}}{{- end -}}
+{{- $_ := set $secrets $name true -}}
+{{- end -}}
+{{- if not (and (kindIs "slice" $v.command) (not (empty $v.command))) -}}{{- fail "agent-app: command must be a non-empty array of CLI argv strings." -}}{{- end -}}
+{{- range $v.command -}}
+{{- if not (and (kindIs "string" .) (not (empty .)) (not (contains "\u0000" (toString .)))) -}}{{- fail "agent-app: command entries must be non-empty strings without NUL." -}}{{- end -}}
+{{- end -}}
+{{- range $key := list "podLabels" "podAnnotations" "nodeSelector" -}}
+{{- include "agent-app.stringMapGuard" (dict "value" (index $v $key) "path" $key) -}}
+{{- end -}}
+{{- range $key, $_ := $v.podLabels -}}
+{{- if has $key (list "helm.sh/chart" "app.kubernetes.io/name" "app.kubernetes.io/instance" "app.kubernetes.io/component" "app.kubernetes.io/managed-by" "chamvi.dev/cron-job") -}}{{- fail (printf "agent-app: podLabels may not set %s; choose a non-reserved label." $key) -}}{{- end -}}
+{{- end -}}
+{{- range $name, $probe := $v.probes -}}
+{{- if not (has $name (list "startup" "liveness" "readiness")) -}}{{- fail "agent-app: probes must contain only startup, liveness and readiness." -}}{{- end -}}
+{{- range $key, $value := $probe -}}
+{{- if not (has $key (list "periodSeconds" "failureThreshold" "timeoutSeconds" "initialDelaySeconds" "successThreshold" "terminationGracePeriodSeconds")) -}}{{- fail (printf "agent-app: probes.%s accepts timing fields only; the HTTP handler is chart-owned." $name) -}}{{- end -}}
+{{- $min := ternary 0 1 (eq $key "initialDelaySeconds") -}}
+{{- include "agent-app.integer" (dict "value" $value "path" (printf "probes.%s.%s" $name $key) "min" $min "max" 2147483647) -}}
+{{- if and (eq $key "successThreshold") (ne $name "readiness") (ne (int $value) 1) -}}{{- fail (printf "agent-app: probes.%s.successThreshold must be 1." $name) -}}{{- end -}}
+{{- if and (eq $key "terminationGracePeriodSeconds") (eq $name "readiness") -}}{{- fail "agent-app: probes.readiness does not accept terminationGracePeriodSeconds." -}}{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- include "agent-app.dnsName" (dict "value" $v.serviceAccount.name "path" "serviceAccount.name" "optional" true) -}}
+{{- range $key := list "serviceAccount" "service" "ingress" -}}
+{{- include "agent-app.stringMapGuard" (dict "value" (index $v $key "annotations") "path" (printf "%s.annotations" $key)) -}}
+{{- end -}}
+{{- include "agent-app.integer" (dict "value" $v.service.port "path" "service.port" "min" 1 "max" 65535) -}}
+{{- if not (has $v.service.type (list "ClusterIP" "NodePort" "LoadBalancer")) -}}{{- fail "agent-app: service.type must be ClusterIP, NodePort or LoadBalancer." -}}{{- end -}}
+{{- if $v.ingress.enabled -}}
+{{- if not $v.ingress.host -}}{{- fail "agent-app: ingress.enabled needs ingress.host." -}}{{- end -}}
+{{- include "agent-app.dnsName" (dict "value" $v.ingress.host "path" "ingress.host") -}}
+{{- end -}}
+{{- include "agent-app.dnsName" (dict "value" $v.ingress.tls.secretName "path" "ingress.tls.secretName" "optional" true) -}}
+{{- if not (kindIs "slice" $v.cronJobs) -}}{{- fail "agent-app: cronJobs must be a list." -}}{{- end -}}
+{{- $names := dict -}}
+{{- $renderedNames := dict -}}
+{{- range $index, $job := $v.cronJobs -}}
+{{- if not (kindIs "map" $job) -}}{{- fail (printf "agent-app: cronJobs[%d] must be an object." $index) -}}{{- end -}}
+{{- range $key, $_ := $job -}}
+{{- if not (has $key (list "name" "schedule" "timeZone" "agent" "subscription" "suspend")) -}}{{- fail (printf "agent-app: cronJobs[%d].%s is not supported; use name, schedule, agent, subscription, timeZone or suspend." $index $key) -}}{{- end -}}
+{{- end -}}
+{{- if not (and (kindIs "string" $job.name) (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" (toString $job.name)) (le (len (toString $job.name)) 20)) -}}{{- fail (printf "agent-app: cronJobs[%d].name must be a DNS label of at most 20 characters." $index) -}}{{- end -}}
+{{- if hasKey $names $job.name -}}{{- fail (printf "agent-app: cronJobs[%d].name %q is used twice; choose unique names." $index $job.name) -}}{{- end -}}
+{{- $_ := set $names $job.name true -}}
+{{- $renderedName := include "agent-app.componentName" (dict "context" $ "suffix" $job.name "max" 52) -}}
+{{- if hasKey $renderedNames $renderedName -}}{{- fail (printf "agent-app: cronJobs[%d] has a duplicate rendered CronJob name; choose unique names or change fullnameOverride." $index) -}}{{- end -}}
+{{- $_ := set $renderedNames $renderedName true -}}
+{{- if not (and (kindIs "string" $job.agent) (regexMatch "^[a-z0-9]+(-[a-z0-9]+)*$" (toString $job.agent)) (le (len (toString $job.agent)) 64)) -}}{{- fail (printf "agent-app: cronJobs[%d].agent must match an agent name, lower-case words separated by hyphens, at most 64 characters." $index) -}}{{- end -}}
+{{- if not (and (kindIs "string" $job.schedule) (not (empty (trim (toString $job.schedule))))) -}}{{- fail (printf "agent-app: cronJobs[%d].schedule must be a non-empty cron expression." $index) -}}{{- end -}}
+{{- range $key := list "subscription" "timeZone" -}}
+{{- if hasKey $job $key -}}
+{{- $value := index $job $key -}}
+{{- if not (and (kindIs "string" $value) (not (empty $value)) (not (contains "\u0000" (toString $value)))) -}}{{- fail (printf "agent-app: cronJobs[%d].%s must be a non-empty string without NUL." $index $key) -}}{{- end -}}
+{{- if and (eq $key "subscription") (hasPrefix "-" $value) -}}{{- fail (printf "agent-app: cronJobs[%d].subscription cannot start with a dash (the CLI treats it as an option)." $index) -}}{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- if and (hasKey $job "suspend") (not (kindIs "bool" $job.suspend)) -}}{{- fail (printf "agent-app: cronJobs[%d].suspend must be a boolean." $index) -}}{{- end -}}
+{{- end -}}
+{{- range $key := list "startingDeadlineSeconds" "successfulJobsHistoryLimit" "failedJobsHistoryLimit" "activeDeadlineSeconds" -}}
+{{- include "agent-app.integer" (dict "value" (index $v.cronJob $key) "path" (printf "cronJob.%s" $key) "min" (ternary 1 0 (eq $key "startingDeadlineSeconds")) "max" 2147483647) -}}
+{{- end -}}

@@ -1,0 +1,8 @@
+image:
+    repository: chamvi-ci/app
+    tag: ci
+    pullPolicy: Never
+secrets: [agent-app-ci]
+sandbox:
+    enabled: true
+    namespace: chamvi-sandbox-ci

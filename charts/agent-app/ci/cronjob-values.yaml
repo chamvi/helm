@@ -1,0 +1,11 @@
+# Render-only until a fixture image and shared PostgreSQL store are supplied.
+image:
+    repository: chamvi-ci/app
+    tag: ci
+    pullPolicy: Never
+secrets: [agent-app-ci]
+cronJobs:
+    - name: ping
+      schedule: '0 0 1 1 *'
+      agent: ping
+      subscription: 'cron:0 0 1 1 *'

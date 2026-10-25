@@ -1,0 +1,21 @@
+{{- if .Values.tests.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "agent-app.componentName" (dict "context" . "suffix" "test") | quote }}
+  labels:
+    {{- include "agent-app.labels" (dict "context" . "component" "test") | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  {{- include "agent-app.podCommon" (dict "context" . "test" true) | nindent 2 }}
+  containers:
+    - name: test
+      {{- include "agent-app.containerCommon" (dict "context" . "test" true) | nindent 6 }}
+      args:
+        - node
+        - -e
+        - {{ printf "fetch('http://%s:%v%s/readyz', {signal: AbortSignal.timeout(10000)}).then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))" (include "agent-app.fullname" .) .Values.service.port (include "agent-app.basePath" .) | quote }}
+{{- end }}

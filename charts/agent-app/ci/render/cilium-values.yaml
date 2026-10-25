@@ -1,0 +1,11 @@
+image:
+    repository: chamvi-ci/app
+    tag: ci
+sandbox:
+    enabled: true
+    namespace: chamvi-sandbox-ci
+    networkPolicy:
+        cilium:
+            enabled: true
+serviceMonitor:
+    enabled: true

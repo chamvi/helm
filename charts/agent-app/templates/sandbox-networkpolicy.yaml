@@ -1,0 +1,36 @@
+{{- if and .Values.sandbox.enabled .Values.sandbox.networkPolicy.enabled (not .Values.sandbox.networkPolicy.cilium.enabled) }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "agent-app.componentName" (dict "context" . "suffix" "sandbox") | quote }}
+  namespace: {{ .Values.sandbox.namespace | quote }}
+  labels:
+    {{- include "agent-app.labels" (dict "context" . "component" "sandbox-policy") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/managed-by: chamvi
+      app.kubernetes.io/component: sandbox
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              {{- include "agent-app.stringMap" .Values.sandbox.networkPolicy.dns.namespaceSelector | nindent 14 }}
+          podSelector:
+            matchLabels:
+              {{- include "agent-app.stringMap" .Values.sandbox.networkPolicy.dns.podSelector | nindent 14 }}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              {{- toYaml (uniq (append .Values.sandbox.networkPolicy.clusterCIDRs "169.254.169.254/32")) | nindent 14 }}
+        - ipBlock:
+            cidr: '::/0'
+            except: ['fc00::/7', 'fe80::/10']
+      ports:
+        - {protocol: TCP, port: 443}
+{{- end }}

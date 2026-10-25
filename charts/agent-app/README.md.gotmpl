@@ -1,0 +1,175 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.description" . }}
+
+## Local implementation status
+
+This is a local implementation, not a published or production-ready release.
+Deployment, Service, ServiceAccount, Ingress, CronJobs, the readiness hook,
+namespaced sandbox RBAC, portable/Cilium policies and ServiceMonitor are implemented.
+Release delivery and live cluster acceptance remain gated. Create the sandbox
+namespace beforehand, separate from the app namespace. RBAC grants pods
+create/get/list/delete and pods/exec get/create only. Policies select provider
+labels managed-by=chamvi and component=sandbox, never app pods. Portable policy
+denies ingress and allows selected DNS plus public HTTPS, excluding configured
+cluster CIDRs and metadata. Configure all cluster/service/node CIDRs for your
+network and use an enforcing CNI. Cilium replaces, never unions with, portable
+policy, requires its API and restricts HTTPS to configured DNS names/patterns.
+ServiceMonitor is skipped without its API. Live enforcement remains unverified.
+
+The official generators are gated in this environment. This is the helm-docs
+source template, not a generated README. `values.schema.json` is also pending;
+runtime guards and local tests do not replace schema generation or its drift gate.
+
+## Install
+
+After publication and acceptance, the intended public package is
+`oci://ghcr.io/chamvi/helm/agent-app`. Until then render the local source:
+
+```sh
+helm template triage ./charts/agent-app -n agents -f values.yaml
+```
+
+When the package is available:
+
+```sh
+helm install triage oci://ghcr.io/chamvi/helm/agent-app --version 0.1.0 -n agents -f values.yaml
+```
+
+Minimal application values (the image must contain the built app and CLI):
+
+```yaml
+image:
+    repository: ghcr.io/example/triage
+    tag: main-abc1234-1792540800
+secrets: [triage-env]
+```
+
+A published package will be consumable through Flux with no registry credential
+for the public chart. The agent image may have its own access requirements.
+
+```yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+    name: triage-chart
+    namespace: flux-system
+spec:
+    interval: 1h
+    url: oci://ghcr.io/chamvi/helm/agent-app
+    ref:
+        semver: '>=0.1.0 <0.2.0'
+    layerSelector:
+        mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+        operation: copy
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+    name: triage
+    namespace: agents
+spec:
+    interval: 10m
+    chartRef:
+        kind: OCIRepository
+        name: triage-chart
+        namespace: flux-system
+    values:
+        image:
+            repository: ghcr.io/example/triage # {"$imagepolicy": "flux-system:triage:name"}
+            tag: main-abc1234-1792540800 # {"$imagepolicy": "flux-system:triage:tag"}
+        secrets: [triage-env]
+        basePath: /agents
+        ingress:
+            enabled: true
+            host: agents.example.com
+            tls:
+                secretName: agents-tls
+```
+
+## Application and credentials
+
+Keep the explicit `src/index.ts` application entry as the normal app layout.
+The image must contain the `chamvi build` output and production dependencies.
+The chart appends `start` to `command` as container **args**, never overrides
+`command`, and therefore preserves the image's tini entrypoint. Optional
+`CHAMVI_AGENTS_DIR` agent folders may be supplied by a custom image or mount;
+this chart does not distribute agent code or create an agents volume.
+
+`secrets` names existing Secrets consumed through `envFrom` on the Deployment
+and Jobs. This chart creates no Secret. Use SOPS or External Secrets to manage
+`DATABASE_URL`, `CHAMVI_TOKENS`, provider API keys, `GITHUB_APP_PRIVATE_KEY`,
+`GITHUB_WEBHOOK_SECRET` and other credentials. `env` is for non-sensitive scalar
+values. Helm cannot inspect Secret contents, prevent collisions hidden inside
+`envFrom`, or check the effective shutdown timeout there. Explicit chart env
+wins over a same-named variable in `envFrom`.
+
+`basePath` prefixes health checks, readiness and the Ingress route. The derived
+`CHAMVI_PUBLIC_URL` is only `https://<host>` (with `tls.secretName`) or
+`http://<host>` (without it). The app adds `basePath` once when constructing UI
+approval links. Set `env.CHAMVI_PUBLIC_URL` explicitly if TLS terminates outside
+the Ingress; it is emitted once and overrides derivation. GitHub intake is
+`<basePath>/channels/github`. Approval links carry IDs, never credentials.
+
+## Shutdown and security
+
+The defaults are a native 5-second preStop sleep, a 90-second CLI force-exit
+timeout, and a 120-second pod grace period. Startup probes allow 120 seconds
+for initialization; liveness and readiness use the same configured HTTP prefix.
+The chart fails when `preStopSleepSeconds * 1000 + CHAMVI_FORCE_EXIT_MS` is not
+strictly less than `terminationGracePeriodSeconds * 1000`. Put the timeout in
+`env` if you need the chart to validate it. A Secret's timeout is invisible to
+Helm. A zero preStop omits the lifecycle hook.
+
+Pods run as UID/GID 1000, with a read-only root filesystem, no privilege
+escalation, all capabilities dropped, RuntimeDefault seccomp and a writable
+`/tmp` emptyDir. The ServiceAccount defaults to no auto-mounted token. The app
+pod requests a token only for sandbox integration; the readiness hook never
+receives application env, Secrets or a service account token. Private image
+pull settings still reach all pods. The hook uses the image's Node runtime,
+not a shell or curl, with a bounded readiness request.
+
+## CronJob mode
+
+```yaml
+cronJobs:
+    - name: digest
+      schedule: '0 7 * * *'
+      timeZone: Europe/Berlin
+      agent: digest
+      subscription: 'cron:0 7 * * *'
+```
+
+These must match the agent's `cron.on()` subscriptions from
+`@chamvi/channel-cron`. `subscription` remains one argv element, spaces included;
+it may be omitted for an agent with exactly one cron subscription. IDs starting
+with a dash are rejected because the CLI interprets them as options.
+
+Any entry disables the in-process scheduler for the whole Deployment, so mirror
+every cron subscription. Supply a shared PostgreSQL `DATABASE_URL` via Secret:
+MemoryStore cannot share approvals, runs or locks across Jobs and the Deployment.
+Jobs use `Forbid`, `restartPolicy: Never` and `backoffLimit: 0`; a retry would
+create a new scheduled-at idempotency key and could repeat work. The chart does
+not retry a failed Job. `cronJob.resources` overrides Deployment resources;
+an empty map inherits them. Jobs share security and scheduling settings, but
+have no HTTP probes, ports or preStop delay.
+
+## Verification and generation
+
+`make test` runs local Helm lint, helm-unittest, the real-render Python contract
+suite, the render matrix and literal values coverage. Requires Helm 4.2.4 or
+compatible, helm-unittest 1.2.1, Python 3 with PyYAML, and yamllint. The optional
+`CHAMVI_APP_MODULE` environment variable points to a built `@chamvi/app` entry
+for a real approval URL integration check; otherwise that check is explicitly
+skipped. Using the monorepo build is not registry-install verification.
+
+The approved tool pins are helm-docs v1.14.2, helm-schema 0.18.1 and
+chart-testing v3.15.0. `make docs`, `make schema` and `make ct-lint` currently
+fail explicitly pending tool authorization. No custom schema or documentation
+generator is supplied. `make generated-check` also fails until both official
+outputs exist. After authorization, restore the upstream tool invocations,
+generate both outputs, check drift and rerun the suites against the schema.
+CI values are render fixtures only: they refer to an unavailable local fixture
+image and externally provided Secret, not an install-verified application.
+
+{{ template "chart.valuesSection" . }}

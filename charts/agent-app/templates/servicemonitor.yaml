@@ -1,0 +1,26 @@
+{{- if and .Values.serviceMonitor.enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/ServiceMonitor") }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "agent-app.fullname" . | quote }}
+  labels:
+    {{- include "agent-app.labels" (dict "context" . "component" "app") | nindent 4 }}
+    {{- with .Values.serviceMonitor.labels }}
+    {{- include "agent-app.stringMap" . | nindent 4 }}
+    {{- end }}
+spec:
+  namespaceSelector:
+    matchNames: [{{ .Release.Namespace | quote }}]
+  selector:
+    matchLabels:
+      {{- include "agent-app.selectorLabels" (dict "context" . "component" "app") | nindent 6 }}
+  endpoints:
+    - port: http
+      path: {{ printf "%s/metrics" .Values.basePath | quote }}
+      {{- with .Values.serviceMonitor.interval }}
+      interval: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.serviceMonitor.scrapeTimeout }}
+      scrapeTimeout: {{ . | quote }}
+      {{- end }}
+{{- end }}

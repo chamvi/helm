@@ -1,0 +1,43 @@
+suite: names
+templates:
+  - templates/deployment.yaml
+  - templates/service.yaml
+  - templates/serviceaccount.yaml
+  - templates/ingress.yaml
+  - templates/cronjob.yaml
+  - templates/tests/test-readyz.yaml
+release:
+  namespace: agents
+values:
+  - values/base.yaml
+set:
+  ingress: {enabled: true, host: agents.example.com}
+  cronJobs:
+    - {name: digest, agent: digest, schedule: '0 7 * * *'}
+tests:
+  - it: accepts a three-character release name on every object
+    release: {name: abc}
+    asserts:
+      - matchRegex: {path: metadata.name, pattern: '^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$'}
+  - it: accepts a twenty-character release name on every object
+    release: {name: aaaaaaaaaaaaaaaaaaaa}
+    asserts:
+      - matchRegex: {path: metadata.name, pattern: '^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$'}
+  - it: accepts a forty-character release name on every object
+    release: {name: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+    asserts:
+      - matchRegex: {path: metadata.name, pattern: '^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$'}
+  - it: accepts a fifty-three-character release name on every object
+    release: {name: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+    asserts:
+      - matchRegex: {path: metadata.name, pattern: '^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$'}
+  - it: preserves the cron suffix within its controller name budget
+    template: templates/cronjob.yaml
+    release: {name: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+    asserts:
+      - matchRegex: {path: metadata.name, pattern: '^.{1,45}-digest$'}
+  - it: preserves the hook suffix within the DNS label budget
+    template: templates/tests/test-readyz.yaml
+    release: {name: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+    asserts:
+      - matchRegex: {path: metadata.name, pattern: '^.{1,58}-test$'}

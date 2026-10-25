@@ -1,0 +1,35 @@
+suite: env
+templates:
+  - templates/deployment.yaml
+release:
+  name: demo
+  namespace: agents
+values:
+  - values/base.yaml
+tests:
+  - it: renders PORT and CHAMVI_BASE_PATH first, then env sorted by name
+    set:
+      basePath: /agents
+      env:
+        CHAMVI_LOG_LEVEL: debug
+        CHAMVI_MAX_CONCURRENT_RUNS: 8
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env
+          value:
+            - { name: PORT, value: "3000" }
+            - { name: CHAMVI_BASE_PATH, value: /agents }
+            - { name: CHAMVI_LOG_LEVEL, value: debug }
+            - { name: CHAMVI_MAX_CONCURRENT_RUNS, value: "8" }
+  - it: mounts every secret through envFrom
+    set:
+      secrets: [triage-db, triage-keys]
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - secretRef: { name: triage-db }
+            - secretRef: { name: triage-keys }
+  - it: renders no envFrom without secrets
+    asserts:
+      - notExists: { path: 'spec.template.spec.containers[0].envFrom' }
