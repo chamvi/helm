@@ -43,7 +43,7 @@
 {{- end -}}
 {{- $force := "90000" -}}
 {{- if hasKey $v.env "CHAMVI_FORCE_EXIT_MS" -}}
-{{- $input := toString $v.env.CHAMVI_FORCE_EXIT_MS -}}
+{{- $input := include "agent-app.envValue" $v.env.CHAMVI_FORCE_EXIT_MS -}}
 {{- if ne $input "" -}}
 {{- if not (regexMatch "^[0-9]+$" $input) -}}{{- fail "agent-app: env.CHAMVI_FORCE_EXIT_MS must be an integer in milliseconds." -}}{{- end -}}
 {{- if gt (float64 $input) 2147483647.0 -}}{{- fail "agent-app: env.CHAMVI_FORCE_EXIT_MS must be at most 2147483647; Node timers overflow above this limit." -}}{{- end -}}

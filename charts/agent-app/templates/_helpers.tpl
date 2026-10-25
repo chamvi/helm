@@ -82,6 +82,11 @@ app.kubernetes.io/managed-by: {{ .context.Release.Service | quote }}
 {{- toJson $names -}}
 {{- end -}}
 
+{{/* Values files and Flux pass numbers as float64, which toString prints as 1.2e+06; toJson keeps 1200000. */}}
+{{- define "agent-app.envValue" -}}
+{{- if or (kindIs "float64" .) (kindIs "float32" .) -}}{{- toJson . -}}{{- else -}}{{- toString . -}}{{- end -}}
+{{- end -}}
+
 {{- define "agent-app.env" -}}
 - name: PORT
   value: "3000"
@@ -103,7 +108,7 @@ app.kubernetes.io/managed-by: {{ .context.Release.Service | quote }}
 {{- range $key, $value := .Values.env }}
 {{- if not (and $derivePublicUrl (eq $key "CHAMVI_PUBLIC_URL")) }}
 - name: {{ $key | quote }}
-  value: {{ $value | toString | quote }}
+  value: {{ include "agent-app.envValue" $value | quote }}
 {{- end }}
 {{- end -}}
 {{- end -}}

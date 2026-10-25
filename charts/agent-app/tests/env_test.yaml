@@ -33,3 +33,23 @@ tests:
   - it: renders no envFrom without secrets
     asserts:
       - notExists: { path: 'spec.template.spec.containers[0].envFrom' }
+  - it: renders whole numbers of a values file (float64) without exponent notation
+    set:
+      env:
+        CHAMVI_DRAIN_TIMEOUT_MS: 1200000
+        CHAMVI_PURGE_INTERVAL_MS: 3600000
+        RATIO: 1.5
+        FLAG: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: CHAMVI_DRAIN_TIMEOUT_MS, value: "1200000" }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: CHAMVI_PURGE_INTERVAL_MS, value: "3600000" }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: RATIO, value: "1.5" }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: FLAG, value: "true" }

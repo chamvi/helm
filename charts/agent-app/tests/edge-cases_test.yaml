@@ -27,6 +27,15 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: 'must stay below terminationGracePeriodSeconds'
+  - it: accepts a force timeout of a million milliseconds from a values file (float64)
+    template: templates/deployment.yaml
+    set:
+      env: {CHAMVI_FORCE_EXIT_MS: 1000000}
+      terminationGracePeriodSeconds: 1100
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: CHAMVI_FORCE_EXIT_MS, value: '1000000'}
   - it: omits preStop at zero and accepts extra probe timings
     template: templates/deployment.yaml
     set:
