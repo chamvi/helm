@@ -1,7 +1,7 @@
 # chamvi monorepo correspondence
 
-Source: `chamvi/chamvi` master at `5780984` (2026-10-25), packages published on npm at 0.2.0. Verify against the source,
-never against the 011 plans, whose quoted contract predates the channels rewrite.
+Source: `chamvi/chamvi` master at `fbb1d11` (2026-10-25, release 0.2.1), packages published on npm at 0.2.1. Verify
+against the source, never against the 011 plans, whose quoted contract predates the channels rewrite.
 
 | chamvi | Path in the monorepo | Chart counterpart |
 |---|---|---|
@@ -23,5 +23,6 @@ never against the 011 plans, whose quoted contract predates the channels rewrite
 | `OPENCLAW_*` | `packages/channel-openclaw/src/module/` | README Secrets table |
 | image `ghcr.io/chamvi/node:24`: tini entrypoint, uid 1000, workdir `/app` | `images/node/Dockerfile` | `args` not `command`, the security contexts, `ci/app/Dockerfile` |
 
-Known: published 0.2.0 double-converts string models in `installDefaultProvider` (fix in chamvi PR #41, ships as 0.2.1).
-The fixture app passes a model object, so it does not hit it.
+Fixed: 0.2.0 double-converted string models in `installDefaultProvider`; chamvi PR #41 fixed it and 0.2.1 (published)
+ships the fix. The fixture app passes a model object, so it never depended on that fix; its `^0.2.0` range resolves to
+0.2.1.
