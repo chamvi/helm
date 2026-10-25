@@ -24,11 +24,9 @@ on_exit() {
             done
             kubectl -n "$ns" get events --sort-by=.lastTimestamp >&2 || true
         done
-        # kind enforces NetworkPolicy in kindnet (kube-network-policies).
+        # Calico enforces the NetworkPolicy in the install job.
         kubectl -n kube-system get pods -o wide >&2 || true
-        kubectl -n kube-system logs -l app=kindnet --tail=200 >&2 || true
-        kubectl -n "$SANDBOX_NAMESPACE" get networkpolicy -o yaml >&2 || true
-        docker exec chart-testing-control-plane nft list ruleset >&2 || true
+        kubectl -n kube-system logs -l k8s-app=calico-node --tail=100 >&2 || true
     fi
     # Clean up on success and failure, so a rerun in the same cluster starts fresh.
     kubectl -n "$SANDBOX_NAMESPACE" delete pod control-probe egress-probe --ignore-not-found --wait=false >/dev/null 2>&1 || true
@@ -57,8 +55,9 @@ kubectl -n "$NAMESPACE" logs job/ping-now | grep -E '^ping: completed \(run [0-9
 echo "3. the sandbox NetworkPolicy allows https://github.com and blocks cluster addresses"
 # The negative target is a pod IP on TCP 443 (inside 10.0.0.0/8 on kind), not the API
 # server: on a single-node cluster the API server is the pod's own node, and NetworkPolicy
-# implementations do not police pod-to-node traffic. A control pod without the sandbox
-# labels must reach the target, so a target that never came up cannot pass the check.
+# implementations do not police pod-to-node traffic. Port 8080 checks the port rule. A
+# control pod without the sandbox labels must reach the target, so a target that never
+# came up cannot pass the check.
 kubectl -n "$NAMESPACE" apply -f - <<EOF
 apiVersion: v1
 kind: Pod
@@ -129,9 +128,9 @@ probe control-probe false "curl -fsS -m 10 -o /dev/null $TARGET || exit 1" || {
     echo "The control pod could not reach $TARGET: the negative check below would prove nothing." >&2
     exit 1
 }
-probe egress-probe true "curl -fsS -m 10 -o /dev/null https://github.com || { echo GITHUB_UNREACHABLE; exit 1; }; if curl -s -m 5 -o /dev/null http://$TARGET_IP:8080; then echo PORT_8080_REACHABLE; fi; if curl -s -m 5 -o /dev/null $TARGET; then echo TARGET_REACHABLE; exit 1; fi" || {
-    echo "The sandbox probe failed: github.com was unreachable or $TARGET (a cluster pod on TCP 443) was reachable." >&2
-    echo "kind enforces NetworkPolicy through kube-network-policies since v0.24.0; check the kind version and CNI." >&2
+probe egress-probe true "curl -fsS -m 10 -o /dev/null https://github.com || { echo GITHUB_UNREACHABLE; exit 1; }; if curl -s -m 5 -o /dev/null $TARGET; then echo TARGET_REACHABLE; exit 1; fi; if curl -s -m 5 -o /dev/null http://$TARGET_IP:8080; then echo PORT_8080_REACHABLE; exit 1; fi" || {
+    echo "The sandbox probe failed: github.com was unreachable, or the cluster pod $TARGET_IP was reachable on 443 or 8080 (see its log)." >&2
+    echo "The install job runs Calico for NetworkPolicy enforcement; check that it is ready." >&2
     exit 1
 }
 

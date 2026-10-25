@@ -22,10 +22,13 @@
 
 ## kind
 
-kind enforces NetworkPolicy with its default CNI since v0.24.0 (kube-network-policies). `kind-smoke.sh` runs a
-sandbox-labelled curl pod that must reach `https://github.com` and must not reach `kubernetes.default.svc`; the API
-server's ClusterIP and kind's node network both lie inside the default `clusterCIDRs`. Should a kind release stop
-enforcing, create the cluster with `disableDefaultCNI: true` and install Calico. ct 3.15 with Helm 4.3.1 is verified for
-`ct lint`; `ct install` on Helm 4 is first exercised by CI (fallback: Helm v3.22.1 for that job).
+kind's default CNI does not enforce NetworkPolicy on GitHub runners: kindnet's kube-network-policies queues
+packets with `queue flags bypass` and accepts them unread. The install job therefore creates the cluster from
+`.github/configs/kind.yaml` (no default CNI, pod subnet `192.168.0.0/16`) and installs Calico v3.32.2.
+`kind-smoke.sh` starts a target pod listening on TCP 443 and 8080 at a cluster pod IP; a control pod without the
+sandbox labels must reach it, and a sandbox-labelled curl pod must reach `https://github.com` and reach neither
+port. The API server is no target: on a single-node cluster it is the pod's own node, and NetworkPolicy
+implementations do not police pod-to-node traffic. ct 3.15 with Helm 4.3.1 is verified for `ct lint`; `ct install`
+on Helm 4 is first exercised by CI (fallback: Helm v3.22.1 for that job).
 
 The Cilium policy is render-tested only (no Cilium cluster in CI); applying it on a real Cilium cluster is a manual check.

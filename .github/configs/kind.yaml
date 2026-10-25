@@ -1,0 +1,8 @@
+# kind cluster for the install job. kindnet's built-in NetworkPolicy enforcement
+# fails open on GitHub runners, so the cluster starts without a CNI and the
+# workflow installs Calico (whose default pool is this pod subnet).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+    disableDefaultCNI: true
+    podSubnet: 192.168.0.0/16

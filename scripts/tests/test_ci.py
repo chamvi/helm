@@ -21,6 +21,11 @@ def manifest_secrets():
     return secrets
 
 
+def workflow_steps(job):
+    workflow = yaml.safe_load((ROOT / ".github/workflows/lint-test.yaml").read_text())
+    return workflow["jobs"][job]["steps"]
+
+
 class CiMatrix(unittest.TestCase):
     def test_every_install_file_names_a_pre_applied_secret(self):
         secrets = manifest_secrets()
@@ -59,15 +64,20 @@ class CiMatrix(unittest.TestCase):
             self.assertTrue(deps[name].startswith("^0.2."), f"{name} must track the published 0.2 line")
 
 
-    def test_kind_loads_nfnetlink_queue_before_the_cluster_starts(self):
-        # kind's kube-network-policies fails open without the module, so the smoke's
-        # egress check would see an unenforced NetworkPolicy.
-        workflow = yaml.safe_load((ROOT / ".github/workflows/lint-test.yaml").read_text())
-        steps = workflow["jobs"]["install"]["steps"]
-        names = [step.get("uses", step.get("run", "")) for step in steps]
-        load = next(i for i, n in enumerate(names) if "modprobe nfnetlink_queue" in n)
-        kind = next(i for i, n in enumerate(names) if n.startswith("helm/kind-action@"))
-        self.assertLess(load, kind)
+    def test_kind_runs_calico_so_the_sandbox_policy_is_enforced(self):
+        # kindnet's built-in kube-network-policies fails open on GitHub runners (its
+        # NFQUEUE rules bypass), so the smoke's egress check needs Calico as the CNI.
+        kind_config = yaml.safe_load((ROOT / ".github/configs/kind.yaml").read_text())
+        self.assertTrue(kind_config["networking"]["disableDefaultCNI"])
+        self.assertEqual(kind_config["networking"]["podSubnet"], "192.168.0.0/16")
+        steps = workflow_steps("install")
+        kind = next(i for i, s in enumerate(steps) if s.get("uses", "").startswith("helm/kind-action@"))
+        self.assertEqual(steps[kind]["with"]["config"], ".github/configs/kind.yaml")
+        calico = next(i for i, s in enumerate(steps) if "projectcalico/calico/" in s.get("run", ""))
+        install = next(i for i, s in enumerate(steps) if "ct install" in s.get("run", ""))
+        self.assertLess(kind, calico)
+        self.assertLess(calico, install)
+        self.assertNotIn("modprobe", "".join(s.get("run", "") for s in steps))
 
 if __name__ == "__main__":
     unittest.main()
