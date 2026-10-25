@@ -1,0 +1,77 @@
+name: release
+
+on:
+  push:
+    branches:
+      - master
+  # Re-run the publish step for whatever Chart.yaml currently holds, without a new
+  # commit: the recovery path when a publish failed on its own (a broken releaser,
+  # an API hiccup) after release-please already merged the version bump.
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+# Each job asks for the scopes it needs; nothing by default.
+permissions: {}
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    if: github.event_name == 'push'
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Runs on every master push. hevi compares Chart.yaml's version against the
+  # published releases (cr --skip-existing) and against the OCI registry
+  # (push-skip-existing), so this is an idempotent no-op until the release-please
+  # PR carrying a version bump is merged. Do NOT gate this on release-please
+  # outputs: the chart package uses skip-github-release (chart-releaser owns tags
+  # and releases), so releases_created never fires for it.
+  publish:
+    runs-on: ubuntu-latest
+    # contents: GitHub releases and the gh-pages index; packages: the OCI push.
+    permissions:
+      contents: write
+      packages: write
+    needs: release-please
+    # release-please is skipped on workflow_dispatch, and a skipped dependency
+    # would skip this job too without an explicit condition.
+    if: ${{ !cancelled() && needs.release-please.result != 'failure' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      # hevi prefers a helm from PATH over its own pinned download, so pin it
+      # here to keep the packaged output independent of the runner image.
+      - name: Set up Helm
+        uses: azure/setup-helm@v5
+        with:
+          version: v4.3.1
+
+      # Publishes agent-app-<version> (GitHub release, gh-pages index.yaml) and
+      # oci://ghcr.io/chamvi/helm/agent-app:<version>. Needs hevi >= v2.0.2.
+      - name: Package, release and push charts
+        uses: tada5hi/hevi@v2
+        with:
+          directory: charts
+          package: true
+          release: true
+          release-generate-notes: true
+          push: true
+          push-host: ghcr.io/${{ github.repository_owner }}/helm
+          push-username: ${{ github.actor }}
+          push-password: ${{ secrets.GITHUB_TOKEN }}
+          push-skip-existing: true

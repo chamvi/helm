@@ -1,0 +1,12 @@
+# Render only (make template passes the Cilium API): the CiliumNetworkPolicy replaces the portable one.
+image:
+    repository: chamvi-ci/app
+    tag: ci
+sandbox:
+    enabled: true
+    namespace: chamvi-sandbox-ci
+    networkPolicy:
+        cilium:
+            enabled: true
+serviceMonitor:
+    enabled: true

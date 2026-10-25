@@ -1,0 +1,66 @@
+suite: cronjob
+templates:
+  - templates/cronjob.yaml
+  - templates/deployment.yaml
+release:
+  name: demo
+  namespace: agents
+values:
+  - values/base.yaml
+set:
+  secrets: [triage-env]
+  cronJobs:
+    - name: digest
+      schedule: "0 7 * * *"
+      timeZone: Europe/Berlin
+      agent: digest
+      subscription: "cron:0 7 * * *"
+    - name: sweep
+      schedule: "*/30 * * * *"
+      agent: sweeper
+tests:
+  - it: renders one CronJob per entry
+    template: templates/cronjob.yaml
+    asserts:
+      - hasDocuments: { count: 2 }
+      - isKind: { of: CronJob }
+  - it: runs run-job once, without retries or overlap
+    template: templates/cronjob.yaml
+    documentIndex: 0
+    asserts:
+      - equal: { path: metadata.name, value: demo-agent-app-digest }
+      - equal: { path: spec.schedule, value: "0 7 * * *" }
+      - equal: { path: spec.timeZone, value: Europe/Berlin }
+      - equal: { path: spec.concurrencyPolicy, value: Forbid }
+      - equal: { path: spec.startingDeadlineSeconds, value: 300 }
+      - equal: { path: spec.jobTemplate.spec.backoffLimit, value: 0 }
+      - equal: { path: spec.jobTemplate.spec.template.spec.restartPolicy, value: Never }
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].args
+          value: [node, node_modules/@chamvi/cli/dist/cli.mjs, run-job, digest, "cron:0 7 * * *"]
+      - notExists: { path: 'spec.jobTemplate.spec.template.spec.containers[0].command' }
+      - equal: { path: 'spec.jobTemplate.spec.template.spec.containers[0].envFrom', value: [{ secretRef: { name: triage-env } }] }
+      - equal: { path: 'spec.jobTemplate.spec.template.metadata.labels["app.kubernetes.io/component"]', value: job }
+      - equal: { path: spec.jobTemplate.spec.template.spec.securityContext.runAsUser, value: 1000 }
+      - equal: { path: spec.jobTemplate.spec.template.spec.terminationGracePeriodSeconds, value: 120 }
+      - equal: { path: 'spec.jobTemplate.spec.template.spec.containers[0].imagePullPolicy', value: IfNotPresent }
+  - it: omits the subscription when the entry names none
+    template: templates/cronjob.yaml
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].args
+          value: [node, node_modules/@chamvi/cli/dist/cli.mjs, run-job, sweeper]
+      - notExists: { path: spec.timeZone }
+  - it: turns the in-process scheduler off on the Deployment
+    template: templates/deployment.yaml
+    asserts:
+      - contains: { path: 'spec.template.spec.containers[0].env', content: { name: CHAMVI_SCHEDULER, value: "false" } }
+  - it: keeps CronJob names within 52 characters
+    template: templates/cronjob.yaml
+    release:
+      name: a-very-long-release-name-that-goes-on-and-on-and-on-x
+    documentIndex: 0
+    asserts:
+      - matchRegex: { path: metadata.name, pattern: "^.{1,52}$" }
+      - matchRegex: { path: metadata.name, pattern: "-digest$" }

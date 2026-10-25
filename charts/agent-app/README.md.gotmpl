@@ -1,0 +1,203 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.deprecationWarning" . }}
+
+![Version](https://img.shields.io/badge/Version-{{ template "chart.version" . }}?style=flat-square&color=informational) <!-- x-release-please-version -->
+{{ template "chart.typeBadge" . }}
+
+{{ template "chart.description" . }}
+
+One image, one Deployment: the chart runs a [chamvi](https://github.com/chamvi/chamvi) agent app built with `chamvi build`
+(or an entry-less app loading `agents/` folders) behind a Service, with an optional Ingress, optional run-job CronJobs,
+the RBAC and egress policy for Kubernetes sandbox pods, and an optional ServiceMonitor.
+
+## Install
+
+<!-- x-release-please-start-version -->
+```sh
+helm install triage oci://ghcr.io/chamvi/helm/agent-app --version {{ template "chart.version" . }} -n agents -f values.yaml
+```
+<!-- x-release-please-end -->
+
+The smallest values file names the agent image and the Secret holding its credentials:
+
+```yaml
+image:
+    repository: ghcr.io/acme/triage
+    tag: main-abc1234-1792540800
+secrets: [triage-env]
+```
+
+### Flux
+
+The chart is a public OCI artifact, so the `OCIRepository` needs no `secretRef`. It lives next to the `HelmRelease` in
+the app's namespace, so the `chartRef` works under helm-controller's `--no-cross-namespace-refs=true` too:
+
+```yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+    name: agent-app
+    namespace: agents
+spec:
+    interval: 1h
+    url: oci://ghcr.io/chamvi/helm/agent-app
+    ref:
+        semver: '0.1.x'
+    layerSelector:
+        mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+        operation: copy
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+    name: triage
+    namespace: agents
+spec:
+    interval: 10m
+    chartRef:
+        kind: OCIRepository
+        name: agent-app
+        namespace: agents
+    values:
+        image:
+            repository: ghcr.io/acme/triage # {"$imagepolicy": "flux-system:triage:name"}
+            tag: main-abc1234-1792540800 # {"$imagepolicy": "flux-system:triage:tag"}
+            digest: ''
+        imagePullSecrets: []
+        replicas: 1
+        command: [node, node_modules/@chamvi/cli/dist/cli.mjs]
+        basePath: ''
+        env: {}
+        secrets: [triage-env]
+        ingress: { enabled: true, className: '', host: agents.example.com, tls: { secretName: agents-tls } }
+        sandbox: { enabled: false }
+        cronJobs: []
+        serviceMonitor: { enabled: false }
+        resources: {}
+```
+
+## The app and its image
+
+The image is the agent repository's own (stage 2 `FROM ghcr.io/chamvi/node:24`, workdir `/app`, user 1000,
+`ENTRYPOINT ["/usr/bin/tini", "--"]`). The value `command` renders into the container **args**, never `command:`,
+so tini stays PID 1: the Deployment runs `command + ["start"]`, each CronJob `command + ["run-job", agent, subscription]`.
+The CLI loads `dist/index.mjs`, or, without an entry, builds the default app from the `agents/` folder
+(`CHAMVI_AGENTS_DIR`, relative to `/app`); either way the agents ship inside the image.
+
+## Secrets and env
+
+`secrets` names existing Secrets; each becomes an `envFrom` `secretRef` on the Deployment and the CronJobs
+(the helm test pod gets none). The chart creates no Secret: create them with SOPS or External Secrets. Typical keys:
+
+| Variable | When |
+|---|---|
+| `DATABASE_URL` | a shared PostgreSQL store: more than one replica, any `cronJobs`, runs that survive a restart |
+| `CHAMVI_TOKENS` | static API tokens (`[{"value", "id", "permissions"}]`), unless another authenticator is configured |
+| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY`, `XAI_API_KEY` | an agent's `'<provider>/<model>'` model string names that provider |
+| `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` | `githubModule()` |
+| `OPENCLAW_HOOKS_TOKEN` (with `OPENCLAW_BASE_URL`, `OPENCLAW_CHANNEL`, `OPENCLAW_TO`) | `openclawModule()` |
+| `AUTHUP_CLIENT_SECRET` (with `AUTHUP_URL`, `AUTHUP_CLIENT_ID`) | `authupModule()` |
+
+`env` holds plain, non-secret values (`CHAMVI_LOG_LEVEL`, `CHAMVI_MAX_CONCURRENT_RUNS`, `CHAMVI_SANDBOX_PROVIDER`, ...),
+rendered in name order after the variables the chart owns. The chart refuses an `env` entry that names one of its own:
+
+| Variable | Value | When |
+|---|---|---|
+| `PORT` | `3000` | always |
+| `CHAMVI_BASE_PATH` | `basePath` | always |
+| `CHAMVI_SCHEDULER` | `false` | `cronJobs` is not empty |
+| `CHAMVI_SANDBOX_NAMESPACE` | `sandbox.namespace` | `sandbox.enabled` |
+| `CHAMVI_PUBLIC_URL` | `https://<ingress.host>` with `tls.secretName`, else `http://<ingress.host>` | `ingress.enabled` and no `env.CHAMVI_PUBLIC_URL` (yours wins) |
+
+The app listens on `HOST` `0.0.0.0` (IPv4 only). On an IPv6-only cluster (EKS IPv6 mode) set `env.HOST: "::"`, which
+listens dual-stack where the node kernel has IPv6; the chart refuses any other `HOST`, since the kubelet probes the pod
+address.
+
+The derived `CHAMVI_PUBLIC_URL` is the origin only: the app appends `basePath` once when it builds approval links
+(`<origin><basePath>/ui/approvals?run=<id>&approval=<id>`, ids only, never a credential). When TLS terminates outside
+the Ingress (a load balancer, a default certificate), set `env.CHAMVI_PUBLIC_URL` to the `https://` origin.
+
+## HTTP
+
+One container port, `3000` named `http`; the Service maps `service.port` (80) to it. Every path lives under `basePath`
+(`""`, or lower-case `/segment` paths without a trailing slash, the app's own rule): `/healthz`, `/readyz`, `/metrics`,
+`/ui` (with `uiModule()`), the GitHub App webhook at `<basePath>/channels/github` (with `githubModule()`) and generic
+webhooks at `<basePath>/channels/webhook/<agent><path>`. The Ingress routes `<basePath>` (or `/`) with `pathType: Prefix`.
+
+## Probes and shutdown
+
+| | Path | Period | Failures |
+|---|---|---|---|
+| startup | `<basePath>/healthz` | 2 s | 60 (120 s for migrations) |
+| liveness | `<basePath>/healthz` | 10 s | 3 |
+| readiness | `<basePath>/readyz` | 5 s | 2 |
+
+On termination the pod sleeps `preStopSleepSeconds` (5, the native `sleep` action) so the endpoints drop it, then the
+CLI gets SIGTERM: readiness 503, channels stopped, HTTP closed, runs drained (30 s), the store closed. The CLI exits
+by force `CHAMVI_FORCE_EXIT_MS` (90 s) after the signal and the kubelet kills at `terminationGracePeriodSeconds` (120).
+The chart refuses a render where `preStopSleepSeconds * 1000 + CHAMVI_FORCE_EXIT_MS >= terminationGracePeriodSeconds * 1000`.
+It reads `env.CHAMVI_FORCE_EXIT_MS` only: a value set through a Secret escapes the check.
+
+## CronJob mode
+
+```yaml
+cronJobs:
+    - name: digest
+      schedule: '0 7 * * *'
+      timeZone: Europe/Berlin
+      agent: digest
+      subscription: 'cron:0 7 * * *'
+```
+
+Each entry fires one `cron.on()` subscription of an agent through `chamvi run-job <agent> [subscription]`. The
+`subscription` id defaults to `cron:<expression>` (spaces included; it stays one argv element) and may be left out for
+an agent with exactly one cron subscription. Any entry sets `CHAMVI_SCHEDULER=false` on the Deployment, whose cron
+channel then validates but never fires, so give **every** cron subscription an entry with the same schedule.
+The Jobs need the Deployment's store: put a PostgreSQL `DATABASE_URL` in a Secret.
+
+CronJobs use `concurrencyPolicy: Forbid`, `restartPolicy: Never` and `backoffLimit: 0`: a retried Job would fire at a
+new time, get a new `<subscription>@<time>` idempotency key and start a duplicate run. `cronJob.resources` overrides the
+Deployment's `resources` (empty inherits them).
+
+## Sandbox pods
+
+With `sandbox.enabled` the app may run `@chamvi/sandbox-k8s` workspaces in `sandbox.namespace`. Select the provider in
+the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or `sandboxModule({ provider: 'kubernetes' })`); the chart sets
+`CHAMVI_SANDBOX_NAMESPACE`.
+
+- Create the namespace first, apart from the release namespace (the chart refuses the same one), and label it for
+  Pod Security `restricted`.
+- A `Role` there grants `pods` `create`, `get`, `list`, `delete` and `pods/exec` `get`, `create`; a `RoleBinding`
+  binds the app's ServiceAccount (release namespace). The app and job pods mount its token only with
+  `sandbox.enabled`; the helm test pod never does, and the provider's sandbox pods mount none.
+- The egress policy selects pods labelled `app.kubernetes.io/managed-by: chamvi` and `app.kubernetes.io/component: sandbox`
+  (the app pod is `component: app`). The portable `NetworkPolicy` denies all ingress and allows DNS to the pods of
+  `networkPolicy.dns` (kube-dns by default, selected by any labels; NodeLocal DNSCache runs on the host network, so add
+  its address to `networkPolicy.dns.ipBlocks`, e.g. `169.254.20.10/32`) plus TCP 443 to every address outside
+  `networkPolicy.clusterCIDRs` and `169.254.169.254/32` (IPv6: outside `networkPolicy.clusterCIDRsIPv6`, default
+  `fc00::/7`, `fe80::/10`). Both lists must hold at least one range.
+- Limits of the portable policy: it needs an enforcing CNI, cannot name hosts, and how `ipBlock` treats pod and service
+  addresses is CNI-defined. Most CNIs evaluate egress after service translation, so a managed cluster's public API
+  endpoint is not covered by private ranges; sandbox pods mount no token, which leaves anonymous access only. List every
+  pod, service and node range of your cluster in `clusterCIDRs`; on IPv6 or dual-stack clusters with globally routable
+  pod or node addresses (EKS IPv6 mode, GKE external IPv6), add those ranges to `clusterCIDRsIPv6` too.
+- `networkPolicy.cilium.enabled` renders a `CiliumNetworkPolicy` **instead of** the portable policy (policies are
+  allow-lists whose union applies, so both together would void the FQDN list): deny-all ingress, the DNS proxy rule
+  and TCP 443 to `cilium.fqdns` only. The render fails when the cluster serves no `cilium.io/v2` API.
+
+## Monitoring and tests
+
+`serviceMonitor.enabled` renders a `monitoring.coreos.com/v1` ServiceMonitor (port `http`, path `<basePath>/metrics`)
+when the cluster serves that API and skips it otherwise. `helm test` runs a pod with the app image's own `node` that
+fetches `<basePath>/readyz` through the Service (`tests.enabled`).
+
+## Security
+
+Every pod runs as uid and gid 1000 (`runAsNonRoot`, `fsGroup: 1000`, seccomp `RuntimeDefault`) with a read-only root
+filesystem, no privilege escalation, every capability dropped and an `emptyDir` at `/tmp`: the Pod Security
+`restricted` profile. `imagePullSecrets` stays empty for public images; a private agent image names its pull Secret there.
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

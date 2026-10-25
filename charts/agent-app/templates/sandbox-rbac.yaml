@@ -1,0 +1,33 @@
+{{- if .Values.sandbox.enabled }}
+{{- $name := include "agent-app.componentName" (dict "context" . "suffix" "sandbox") }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name | quote }}
+  namespace: {{ .Values.sandbox.namespace | quote }}
+  labels:
+    {{- include "agent-app.labels" (dict "context" . "component" "sandbox-policy") | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [create, get, list, delete]
+  - apiGroups: [""]
+    resources: [pods/exec]
+    verbs: [get, create]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name | quote }}
+  namespace: {{ .Values.sandbox.namespace | quote }}
+  labels:
+    {{- include "agent-app.labels" (dict "context" . "component" "sandbox-policy") | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name | quote }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "agent-app.serviceAccountName" . | quote }}
+    namespace: {{ .Release.Namespace | quote }}
+{{- end }}

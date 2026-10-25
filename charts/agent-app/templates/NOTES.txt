@@ -1,0 +1,34 @@
+In-cluster readiness URL:
+  http://{{ include "agent-app.fullname" . }}.{{ .Release.Namespace }}.svc:{{ include "agent-app.scalar" .Values.service.port }}{{ include "agent-app.basePath" . }}/readyz
+
+Run the Node readiness probe through the Service:
+  helm test {{ .Release.Name }} --namespace {{ .Release.Namespace }}
+
+{{- if .Values.cronJobs }}
+CronJob mode sets CHAMVI_SCHEDULER=false for the whole Deployment.
+Mirror EVERY cron subscription (cron.on()) with a cronJobs entry. Supply DATABASE_URL in an
+existing Secret: MemoryStore is not shared between the Deployment and Jobs.
+{{- end }}
+{{- if gt (int .Values.replicas) 1 }}
+Multiple replicas require a shared PostgreSQL DATABASE_URL in an existing Secret.
+{{- end }}
+{{- if and .Values.ingress.enabled (not .Values.ingress.tls.secretName) }}
+Ingress without tls.secretName derives an http:// origin. If TLS terminates at
+an external load balancer or default certificate, set env.CHAMVI_PUBLIC_URL to
+the HTTPS origin. Do not append basePath: the application adds it once.
+{{- end }}
+The shutdown guard can read env.CHAMVI_FORCE_EXIT_MS only. A value supplied via
+envFrom Secret is invisible to Helm. Keep preStop plus the effective force-exit
+timeout strictly below terminationGracePeriodSeconds.
+{{- if .Values.sandbox.enabled }}
+Sandbox pods run in namespace {{ .Values.sandbox.namespace }} (create it first and
+label it for Pod Security restricted). The chart grants the app's ServiceAccount
+pods create/get/list/delete and pods/exec get/create there. Select the Kubernetes
+provider in the app: env.CHAMVI_SANDBOX_PROVIDER=kubernetes or sandboxModule({ provider: 'kubernetes' }).
+{{- if .Values.sandbox.networkPolicy.enabled }}
+The sandbox egress policy only takes effect with an enforcing CNI.
+{{- end }}
+{{- end }}
+{{- if and .Values.serviceMonitor.enabled (not (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/ServiceMonitor")) }}
+ServiceMonitor skipped: the cluster serves no monitoring.coreos.com/v1 ServiceMonitor API.
+{{- end }}

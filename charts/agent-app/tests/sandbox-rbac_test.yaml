@@ -1,0 +1,39 @@
+suite: sandbox-rbac
+templates:
+  - templates/sandbox-rbac.yaml
+release:
+  name: demo
+  namespace: agents
+values:
+  - values/base.yaml
+set:
+  sandbox.enabled: true
+  sandbox.namespace: agents-sandbox
+tests:
+  - it: grants exactly the provider's pod verbs in the sandbox namespace
+    documentIndex: 0
+    asserts:
+      - isKind: { of: Role }
+      - equal: { path: metadata.name, value: demo-agent-app-sandbox }
+      - equal: { path: metadata.namespace, value: agents-sandbox }
+      - equal:
+          path: rules
+          value:
+            - { apiGroups: [""], resources: [pods], verbs: [create, get, list, delete] }
+            - { apiGroups: [""], resources: [pods/exec], verbs: [get, create] }
+  - it: binds the release namespace's ServiceAccount and carries the chart labels
+    documentIndex: 1
+    asserts:
+      - isKind: { of: RoleBinding }
+      - equal: { path: metadata.namespace, value: agents-sandbox }
+      - equal:
+          path: subjects
+          value: [{ kind: ServiceAccount, name: demo-agent-app, namespace: agents }]
+      - equal: { path: roleRef, value: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: demo-agent-app-sandbox } }
+      - equal: { path: 'metadata.labels["app.kubernetes.io/component"]', value: sandbox-policy }
+      - equal: { path: 'metadata.labels["app.kubernetes.io/instance"]', value: demo }
+  - it: renders nothing without sandbox.enabled
+    set:
+      sandbox.enabled: false
+    asserts:
+      - hasDocuments: { count: 0 }

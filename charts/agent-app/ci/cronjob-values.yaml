@@ -1,0 +1,11 @@
+# CronJob mode with the fixture app; the kind smoke runs the job (MemoryStore per pod, ci only).
+image:
+    repository: chamvi-ci/app
+    tag: ci
+    pullPolicy: Never
+secrets: [agent-app-ci]
+cronJobs:
+    - name: ping
+      schedule: '0 0 1 1 *'
+      agent: ping
+      subscription: 'cron:0 0 1 1 *'

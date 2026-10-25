@@ -1,0 +1,124 @@
+suite: validations
+templates:
+  - templates/validations.yaml
+release:
+  name: demo
+  namespace: agents
+tests:
+  - it: fails without image.repository
+    asserts:
+      - failedTemplate:
+          errorMessage: "agent-app: image.repository is required (the agent app image, e.g. ghcr.io/<owner>/<repo>)."
+  - it: fails without a tag or digest
+    set:
+      image.repository: ghcr.io/acme/triage
+    asserts:
+      - failedTemplate:
+          errorMessage: "agent-app: set image.tag or image.digest."
+  - it: refuses a malformed digest
+    values: [values/base.yaml]
+    set:
+      image.digest: sha256:abc
+    asserts:
+      - failedTemplate:
+          errorPattern: "image.digest must be sha256:<64 hex>"
+  - it: renders nothing for valid values
+    values: [values/base.yaml]
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: refuses an env name the chart owns
+    values: [values/base.yaml]
+    set:
+      env:
+        PORT: "8080"
+    asserts:
+      - failedTemplate:
+          errorMessage: "agent-app: env.PORT is set by the chart (PORT, CHAMVI_BASE_PATH, CHAMVI_SCHEDULER with cronJobs, CHAMVI_SANDBOX_NAMESPACE with sandbox.enabled); use the matching value instead."
+  - it: refuses a HOST the kubelet probes cannot reach
+    values: [values/base.yaml]
+    set:
+      env:
+        HOST: 127.0.0.1
+    asserts:
+      - failedTemplate:
+          errorMessage: "agent-app: env.HOST must be 0.0.0.0 (IPv4, the default) or :: (IPv6 and dual-stack); the kubelet probes the pod address."
+  - it: accepts the IPv6 wildcard HOST
+    values: [values/base.yaml]
+    set:
+      env:
+        HOST: "::"
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: refuses an invalid env name
+    values: [values/base.yaml]
+    set:
+      env:
+        "1BAD": x
+    asserts:
+      - failedTemplate:
+          errorPattern: "env name \"1BAD\" is no valid variable name"
+  - it: refuses a basePath with a trailing slash
+    values: [values/base.yaml]
+    set:
+      basePath: /agents/
+    asserts:
+      - failedTemplate:
+          errorPattern: "basePath must be empty or /segment"
+  - it: refuses an upper-case basePath the app would refuse
+    values: [values/base.yaml]
+    set:
+      basePath: /API
+    asserts:
+      - failedTemplate:
+          errorPattern: "basePath must be empty or /segment"
+  - it: refuses a force-exit timeout that outlives the grace period
+    values: [values/base.yaml]
+    set:
+      env:
+        CHAMVI_FORCE_EXIT_MS: "116000"
+    asserts:
+      - failedTemplate:
+          errorMessage: "agent-app: preStopSleepSeconds (5 s) + CHAMVI_FORCE_EXIT_MS (116000 ms) must stay below terminationGracePeriodSeconds (120 s), or the kubelet kills the app before it drained."
+  - it: accepts the defaults (5 s + 90 s < 120 s)
+    values: [values/base.yaml]
+    asserts:
+      - hasDocuments: { count: 0 }
+  - it: refuses a non-integer CHAMVI_FORCE_EXIT_MS
+    values: [values/base.yaml]
+    set:
+      env:
+        CHAMVI_FORCE_EXIT_MS: 90s
+    asserts:
+      - failedTemplate:
+          errorPattern: "env.CHAMVI_FORCE_EXIT_MS must be an integer"
+  - it: refuses a podLabels entry that overrides a selector label
+    values: [values/base.yaml]
+    set:
+      podLabels:
+        app.kubernetes.io/component: sandbox
+    asserts:
+      - failedTemplate:
+          errorPattern: "podLabels may not set app.kubernetes.io/component"
+  - it: refuses an unknown top-level key through the schema
+    values: [values/base.yaml]
+    set:
+      replicass: 2
+    asserts:
+      - failedTemplate:
+          errorPattern: "additional properties 'replicass'"
+  - it: refuses an unknown nested key through the schema
+    values: [values/base.yaml]
+    set:
+      service.porrt: 8080
+    asserts:
+      - failedTemplate:
+          errorPattern: "additional properties 'porrt'"
+  - it: refuses a negative replica count through the schema
+    values: [values/base.yaml]
+    set:
+      replicas: 0
+    asserts:
+      - failedTemplate:
+          errorPattern: "replicas"

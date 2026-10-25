@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agent-app.fullname" . | quote }}
+  labels:
+    {{- include "agent-app.labels" (dict "context" . "component" "app") | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- include "agent-app.stringMap" . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: {{ include "agent-app.scalar" .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "agent-app.selectorLabels" (dict "context" . "component" "app") | nindent 4 }}

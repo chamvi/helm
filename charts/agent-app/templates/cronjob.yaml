@@ -1,0 +1,51 @@
+{{- range .Values.cronJobs }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "agent-app.componentName" (dict "context" $ "suffix" .name "max" 52) | quote }}
+  labels:
+    {{- include "agent-app.labels" (dict "context" $ "component" "job") | nindent 4 }}
+spec:
+  schedule: {{ .schedule | quote }}
+  {{- with .timeZone }}
+  timeZone: {{ . | quote }}
+  {{- end }}
+  {{- if hasKey . "suspend" }}
+  suspend: {{ .suspend }}
+  {{- end }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: {{ include "agent-app.scalar" $.Values.cronJob.startingDeadlineSeconds }}
+  successfulJobsHistoryLimit: {{ include "agent-app.scalar" $.Values.cronJob.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ include "agent-app.scalar" $.Values.cronJob.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      {{- if gt (int $.Values.cronJob.activeDeadlineSeconds) 0 }}
+      activeDeadlineSeconds: {{ include "agent-app.scalar" $.Values.cronJob.activeDeadlineSeconds }}
+      {{- end }}
+      template:
+        metadata:
+          labels:
+            {{- include "agent-app.labels" (dict "context" $ "component" "job") | nindent 12 }}
+            chamvi.dev/cron-job: {{ .name | quote }}
+            {{- with $.Values.podLabels }}
+            {{- include "agent-app.stringMap" . | nindent 12 }}
+            {{- end }}
+          {{- with $.Values.podAnnotations }}
+          annotations:
+            {{- include "agent-app.stringMap" . | nindent 12 }}
+          {{- end }}
+        spec:
+          restartPolicy: Never
+          {{- include "agent-app.podCommon" (dict "context" $ "test" false) | nindent 10 }}
+          containers:
+            - name: job
+              {{- include "agent-app.containerCommon" (dict "context" $ "test" false) | nindent 14 }}
+              args:
+                {{- $args := concat $.Values.command (list "run-job" .agent) }}
+                {{- if .subscription }}{{- $args = append $args .subscription }}{{- end }}
+                {{- toYaml $args | nindent 16 }}
+              resources:
+                {{- toYaml (default $.Values.resources $.Values.cronJob.resources) | nindent 16 }}
+{{- end }}

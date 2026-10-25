@@ -1,0 +1,10 @@
+remote: origin
+target-branch: master
+chart-dirs:
+    - charts
+helm-extra-args: --timeout 600s
+# No upgrade leg until the first chart is published.
+upgrade: false
+check-version-increment: false
+validate-maintainers: false
+lint-conf: .github/configs/lintconf.yaml

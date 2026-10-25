@@ -1,0 +1,33 @@
+{{- $np := .Values.sandbox.networkPolicy -}}
+{{- if and .Values.sandbox.enabled $np.enabled $np.cilium.enabled }}
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "agent-app.componentName" (dict "context" . "suffix" "sandbox") | quote }}
+  namespace: {{ .Values.sandbox.namespace | quote }}
+  labels:
+    {{- include "agent-app.labels" (dict "context" . "component" "sandbox-policy") | nindent 4 }}
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/managed-by: chamvi
+      app.kubernetes.io/component: sandbox
+  ingress: [{}]
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: {{ index $np.dns.namespaceSelector "kubernetes.io/metadata.name" | quote }}
+            {{- range $key, $value := $np.dns.podSelector }}
+            {{ printf "k8s:%s" $key | quote }}: {{ $value | quote }}
+            {{- end }}
+      toPorts:
+        - ports: [{port: '53', protocol: ANY}]
+          rules:
+            dns: [{matchPattern: '*'}]
+    - toFQDNs:
+        {{- range $np.cilium.fqdns }}
+        - {{ ternary "matchPattern" "matchName" (contains "*" .) }}: {{ . | quote }}
+        {{- end }}
+      toPorts:
+        - ports: [{port: '443', protocol: TCP}]
+{{- end }}

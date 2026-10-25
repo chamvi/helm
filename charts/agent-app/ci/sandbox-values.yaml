@@ -1,0 +1,9 @@
+# Sandbox RBAC and the portable NetworkPolicy; CI creates the chamvi-sandbox-ci namespace first.
+image:
+    repository: chamvi-ci/app
+    tag: ci
+    pullPolicy: Never
+secrets: [agent-app-ci]
+sandbox:
+    enabled: true
+    namespace: chamvi-sandbox-ci

@@ -1,0 +1,54 @@
+suite: notes
+templates:
+  - templates/NOTES.txt
+release:
+  name: demo
+  namespace: agents
+values:
+  - values/base.yaml
+tests:
+  - it: names the in-cluster readiness URL and the helm test
+    set:
+      basePath: /agents
+    asserts:
+      - matchRegexRaw:
+          pattern: "http://demo-agent-app.agents.svc:80/agents/readyz"
+      - matchRegexRaw:
+          pattern: "helm test demo --namespace agents"
+  - it: warns that sandbox policies need an enforcing CNI and a separate namespace
+    set:
+      sandbox.enabled: true
+      sandbox.namespace: agents-sandbox
+    asserts:
+      - matchRegexRaw:
+          pattern: "enforcing CNI"
+      - matchRegexRaw:
+          pattern: "CHAMVI_SANDBOX_PROVIDER"
+      - notMatchRegexRaw:
+          pattern: "NOT included"
+  - it: says the ServiceMonitor was skipped when its API is missing
+    set:
+      serviceMonitor.enabled: true
+    asserts:
+      - matchRegexRaw:
+          pattern: "ServiceMonitor skipped"
+  - it: says nothing about a skipped ServiceMonitor when the API exists
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/ServiceMonitor
+    set:
+      serviceMonitor.enabled: true
+    asserts:
+      - notMatchRegexRaw:
+          pattern: "ServiceMonitor skipped"
+  - it: tells CronJob mode to mirror every cron subscription
+    set:
+      cronJobs:
+        - name: digest
+          schedule: "0 7 * * *"
+          agent: digest
+    asserts:
+      - matchRegexRaw:
+          pattern: "CHAMVI_SCHEDULER=false"
+      - matchRegexRaw:
+          pattern: "cron subscription"

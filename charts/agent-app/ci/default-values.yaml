@@ -1,0 +1,13 @@
+# Baseline: the fixture app (ci/app, loaded into kind), MemoryStore, static tokens from ci/manifests.
+# The stray global key guards umbrella use: the schema must accept globals it does not declare.
+global:
+    umbrellaProbe: parent-injected
+image:
+    repository: chamvi-ci/app
+    tag: ci
+    pullPolicy: Never
+secrets: [agent-app-ci]
+resources:
+    requests:
+        cpu: 50m
+        memory: 128Mi

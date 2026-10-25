@@ -1,0 +1,62 @@
+suite: security layer and monitoring
+release:
+  name: demo
+  namespace: agents
+values: [values/base.yaml]
+templates:
+  - templates/sandbox-ciliumnetworkpolicy.yaml
+  - templates/sandbox-networkpolicy.yaml
+  - templates/servicemonitor.yaml
+capabilities:
+  apiVersions:
+    - cilium.io/v2/CiliumNetworkPolicy
+tests:
+  - it: replaces portable egress with DNS proxy and FQDN HTTPS
+    template: templates/sandbox-ciliumnetworkpolicy.yaml
+    set:
+      sandbox: {enabled: true, namespace: sandboxes, networkPolicy: {cilium: {enabled: true}}}
+    asserts:
+      - equal:
+          path: spec.endpointSelector.matchLabels
+          value: {app.kubernetes.io/managed-by: chamvi, app.kubernetes.io/component: sandbox}
+      - equal: {path: spec.ingress, value: [{}]}
+      - equal:
+          path: spec.egress[0]
+          value:
+            toEndpoints:
+              - matchLabels: {"k8s:io.kubernetes.pod.namespace": kube-system, "k8s:k8s-app": kube-dns}
+            toPorts:
+              - ports: [{port: '53', protocol: ANY}]
+                rules: {dns: [{matchPattern: '*'}]}
+      - equal:
+          path: spec.egress[1]
+          value:
+            toFQDNs: [{matchName: github.com}, {matchPattern: '*.github.com'}, {matchPattern: '*.githubusercontent.com'}, {matchName: registry.npmjs.org}]
+            toPorts: [{ports: [{port: '443', protocol: TCP}]}]
+  - it: never unions the portable allowlist with Cilium
+    template: templates/sandbox-networkpolicy.yaml
+    set:
+      sandbox: {enabled: true, namespace: sandboxes, networkPolicy: {cilium: {enabled: true}}}
+    asserts:
+      - hasDocuments: {count: 0}
+  - it: scrapes metrics through the service selector and base path
+    template: templates/servicemonitor.yaml
+    capabilities:
+      apiVersions: [monitoring.coreos.com/v1/ServiceMonitor]
+    set:
+      basePath: /agents
+      serviceMonitor: {enabled: true, interval: 30s, scrapeTimeout: 5s, labels: {release: prometheus}}
+    asserts:
+      - isKind: {of: ServiceMonitor}
+      - equal: {path: spec.namespaceSelector.matchNames, value: [agents]}
+      - equal:
+          path: spec.selector.matchLabels
+          value: {app.kubernetes.io/name: agent-app, app.kubernetes.io/instance: demo, app.kubernetes.io/component: app}
+      - equal: {path: spec.endpoints, value: [{port: http, path: /agents/metrics, interval: 30s, scrapeTimeout: 5s}]}
+      - equal: {path: metadata.labels.release, value: prometheus}
+  - it: skips monitoring without its API
+    template: templates/servicemonitor.yaml
+    capabilities: {apiVersions: []}
+    set: {serviceMonitor.enabled: true}
+    asserts:
+      - hasDocuments: {count: 0}

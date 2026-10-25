@@ -1,0 +1,766 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "affinity": {
+      "additionalProperties": true,
+      "description": "Kubernetes scheduling affinity.",
+      "required": [],
+      "title": "affinity",
+      "type": "object"
+    },
+    "basePath": {
+      "default": "",
+      "description": "HTTP prefix, empty or lower-case /segment paths without a trailing slash.",
+      "required": [],
+      "title": "basePath",
+      "type": "string"
+    },
+    "command": {
+      "description": "CLI prefix. Rendered as the container args (never `command:`), so the image's tini entrypoint stays PID 1: the Deployment runs `command + [start]`, a CronJob `command + [run-job, agent, subscription]`.",
+      "items": {
+        "minLength": 1,
+        "required": [],
+        "type": "string"
+      },
+      "minItems": 1,
+      "required": [],
+      "title": "command",
+      "type": "array"
+    },
+    "cronJob": {
+      "additionalProperties": false,
+      "description": "Defaults shared by every run-job CronJob.",
+      "properties": {
+        "activeDeadlineSeconds": {
+          "default": 0,
+          "description": "Job lifetime limit; zero leaves it unset.",
+          "maximum": 2147483647,
+          "minimum": 0,
+          "required": [],
+          "title": "activeDeadlineSeconds",
+          "type": "integer"
+        },
+        "failedJobsHistoryLimit": {
+          "default": 3,
+          "description": "Failed Jobs retained.",
+          "maximum": 2147483647,
+          "minimum": 0,
+          "required": [],
+          "title": "failedJobsHistoryLimit",
+          "type": "integer"
+        },
+        "resources": {
+          "additionalProperties": true,
+          "description": "Job resources; empty inherits application resources.",
+          "required": [],
+          "title": "resources",
+          "type": "object"
+        },
+        "startingDeadlineSeconds": {
+          "default": 300,
+          "description": "Deadline for starting a missed schedule.",
+          "maximum": 2147483647,
+          "minimum": 1,
+          "required": [],
+          "title": "startingDeadlineSeconds",
+          "type": "integer"
+        },
+        "successfulJobsHistoryLimit": {
+          "default": 3,
+          "description": "Completed Jobs retained.",
+          "maximum": 2147483647,
+          "minimum": 0,
+          "required": [],
+          "title": "successfulJobsHistoryLimit",
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "title": "cronJob",
+      "type": "object"
+    },
+    "cronJobs": {
+      "description": "run-job CronJobs, one per agent `cron.on()` subscription (`name`, `schedule`, `agent`, optional `subscription` id such as `cron:0 7 * * *`, `timeZone`, `suspend`). Any entry sets `CHAMVI_SCHEDULER=false` on the Deployment, so mirror every cron subscription.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "agent": {
+            "required": [],
+            "type": "string"
+          },
+          "name": {
+            "required": [],
+            "type": "string"
+          },
+          "schedule": {
+            "required": [],
+            "type": "string"
+          },
+          "subscription": {
+            "required": [],
+            "type": "string"
+          },
+          "suspend": {
+            "required": [],
+            "type": "boolean"
+          },
+          "timeZone": {
+            "required": [],
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "schedule",
+          "agent"
+        ],
+        "type": "object"
+      },
+      "required": [],
+      "title": "cronJobs",
+      "type": "array"
+    },
+    "env": {
+      "additionalProperties": {
+        "type": [
+          "string",
+          "integer",
+          "number",
+          "boolean"
+        ]
+      },
+      "description": "Plain environment values, never credentials; use secrets for sensitive values.",
+      "required": [],
+      "title": "env",
+      "type": "object"
+    },
+    "fullnameOverride": {
+      "default": "",
+      "description": "Override the resource name (DNS label starting with a letter, at most 63 characters).",
+      "required": [],
+      "title": "fullnameOverride",
+      "type": "string"
+    },
+    "global": {
+      "additionalProperties": true,
+      "description": "Free-form umbrella chart values.",
+      "required": [],
+      "title": "global",
+      "type": "object"
+    },
+    "image": {
+      "additionalProperties": false,
+      "description": "Agent application image; no default application is supplied.",
+      "properties": {
+        "digest": {
+          "default": "",
+          "description": "Optional sha256 digest, preferred over the tag.",
+          "required": [],
+          "title": "digest",
+          "type": "string"
+        },
+        "pullPolicy": {
+          "default": "IfNotPresent",
+          "description": "Image pull policy.",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ],
+          "required": [],
+          "title": "pullPolicy"
+        },
+        "repository": {
+          "default": "",
+          "description": "Required application image repository.",
+          "required": [],
+          "title": "repository",
+          "type": "string"
+        },
+        "tag": {
+          "default": "",
+          "description": "Required image tag unless digest is set. Quote numeric tags.",
+          "required": [],
+          "title": "tag",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repository",
+        "tag",
+        "digest"
+      ],
+      "title": "image",
+      "type": "object"
+    },
+    "imagePullSecrets": {
+      "description": "Existing registry credentials for private agent images only.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "required": [],
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "required": [],
+      "title": "imagePullSecrets",
+      "type": "array"
+    },
+    "ingress": {
+      "additionalProperties": false,
+      "description": "Optional Ingress and public URL derivation.",
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Ingress controller annotations.",
+          "required": [],
+          "title": "annotations",
+          "type": "object"
+        },
+        "className": {
+          "default": "",
+          "description": "Ingress class name.",
+          "required": [],
+          "title": "className",
+          "type": "string"
+        },
+        "enabled": {
+          "default": false,
+          "description": "Create an Ingress.",
+          "required": [],
+          "title": "enabled",
+          "type": "boolean"
+        },
+        "host": {
+          "default": "",
+          "description": "Concrete DNS host, required when ingress is enabled.",
+          "required": [],
+          "title": "host",
+          "type": "string"
+        },
+        "tls": {
+          "additionalProperties": false,
+          "description": "TLS settings.",
+          "properties": {
+            "secretName": {
+              "default": "",
+              "description": "TLS Secret name; enables HTTPS origin derivation.",
+              "required": [],
+              "title": "secretName",
+              "type": "string"
+            }
+          },
+          "required": [
+            "secretName"
+          ],
+          "title": "tls",
+          "type": "object"
+        }
+      },
+      "required": [
+        "enabled",
+        "className",
+        "host",
+        "tls"
+      ],
+      "title": "ingress",
+      "type": "object"
+    },
+    "nameOverride": {
+      "default": "",
+      "description": "Override the chart name (DNS label, at most 63 characters).",
+      "required": [],
+      "title": "nameOverride",
+      "type": "string"
+    },
+    "nodeSelector": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Node selector for application and job pods.",
+      "required": [],
+      "title": "nodeSelector",
+      "type": "object"
+    },
+    "podAnnotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Annotations for application and job pods.",
+      "required": [],
+      "title": "podAnnotations",
+      "type": "object"
+    },
+    "podLabels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Extra pod labels; chart labels and the cron-job label are reserved.",
+      "required": [],
+      "title": "podLabels",
+      "type": "object"
+    },
+    "preStopSleepSeconds": {
+      "default": 5,
+      "description": "Native preStop sleep on the Deployment; zero omits the lifecycle.",
+      "maximum": 2147483647,
+      "minimum": 0,
+      "required": [],
+      "title": "preStopSleepSeconds",
+      "type": "integer"
+    },
+    "probes": {
+      "additionalProperties": false,
+      "description": "HTTP probes share the basePath and named http port.",
+      "properties": {
+        "liveness": {
+          "additionalProperties": true,
+          "description": "Liveness HTTP probe timings; additional Kubernetes timing fields are accepted.",
+          "properties": {
+            "failureThreshold": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "required": [],
+              "type": "integer"
+            },
+            "periodSeconds": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "required": [],
+              "type": "integer"
+            },
+            "timeoutSeconds": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "required": [],
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "title": "liveness",
+          "type": "object"
+        },
+        "readiness": {
+          "additionalProperties": true,
+          "description": "Readiness HTTP probe timings; additional Kubernetes timing fields are accepted.",
+          "properties": {
+            "failureThreshold": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "required": [],
+              "type": "integer"
+            },
+            "periodSeconds": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "required": [],
+              "type": "integer"
+            },
+            "timeoutSeconds": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "required": [],
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "title": "readiness",
+          "type": "object"
+        },
+        "startup": {
+          "additionalProperties": true,
+          "description": "Startup HTTP probe timings; additional Kubernetes timing fields are accepted.",
+          "properties": {
+            "failureThreshold": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "required": [],
+              "type": "integer"
+            },
+            "periodSeconds": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "required": [],
+              "type": "integer"
+            },
+            "timeoutSeconds": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "required": [],
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "title": "startup",
+          "type": "object"
+        }
+      },
+      "required": [],
+      "title": "probes",
+      "type": "object"
+    },
+    "replicas": {
+      "default": 1,
+      "description": "Application replicas; more than one requires a shared database.",
+      "maximum": 2147483647,
+      "minimum": 1,
+      "required": [],
+      "title": "replicas",
+      "type": "integer"
+    },
+    "resources": {
+      "additionalProperties": true,
+      "description": "Application resource requests and limits.",
+      "required": [],
+      "title": "resources",
+      "type": "object"
+    },
+    "sandbox": {
+      "additionalProperties": false,
+      "description": "Kubernetes sandbox pods (the chamvi sandbox-k8s provider): a Role and RoleBinding in `sandbox.namespace`, the egress policy, and `CHAMVI_SANDBOX_NAMESPACE` on the app.",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "Grant the app's ServiceAccount the sandbox Role and mount its token. Select the provider in the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or the module option).",
+          "required": [],
+          "title": "enabled",
+          "type": "boolean"
+        },
+        "namespace": {
+          "default": "",
+          "description": "Namespace of the sandbox pods; must exist and differ from the release namespace.",
+          "required": [],
+          "title": "namespace",
+          "type": "string"
+        },
+        "networkPolicy": {
+          "additionalProperties": false,
+          "description": "Sandbox egress controls.",
+          "properties": {
+            "cilium": {
+              "additionalProperties": false,
+              "description": "Optional Cilium replacement policy.",
+              "properties": {
+                "enabled": {
+                  "default": false,
+                  "description": "Use FQDN policy instead of the portable NetworkPolicy.",
+                  "required": [],
+                  "title": "enabled",
+                  "type": "boolean"
+                },
+                "fqdns": {
+                  "description": "Allowed HTTPS DNS names and patterns.",
+                  "items": {
+                    "required": [],
+                    "type": "string"
+                  },
+                  "required": [],
+                  "title": "fqdns",
+                  "type": "array"
+                }
+              },
+              "required": [
+                "enabled"
+              ],
+              "title": "cilium",
+              "type": "object"
+            },
+            "clusterCIDRs": {
+              "description": "IPv4 cluster CIDRs (pod, service and node ranges) excluded from portable public HTTPS egress; at least one.",
+              "items": {
+                "required": [],
+                "type": "string"
+              },
+              "required": [],
+              "title": "clusterCIDRs",
+              "type": "array"
+            },
+            "clusterCIDRsIPv6": {
+              "description": "IPv6 cluster CIDRs excluded from portable public HTTPS egress; add globally routable pod, service and node ranges (EKS IPv6, dual-stack); at least one.",
+              "items": {
+                "required": [],
+                "type": "string"
+              },
+              "required": [],
+              "title": "clusterCIDRsIPv6",
+              "type": "array"
+            },
+            "dns": {
+              "additionalProperties": false,
+              "description": "Selectors of DNS pods reachable by sandboxes.",
+              "properties": {
+                "ipBlocks": {
+                  "description": "Extra DNS server CIDRs for the portable policy, e.g. NodeLocal DNSCache's `169.254.20.10/32` (a hostNetwork DaemonSet no pod selector matches).",
+                  "items": {
+                    "required": [],
+                    "type": "string"
+                  },
+                  "required": [],
+                  "title": "ipBlocks",
+                  "type": "array"
+                },
+                "namespaceSelector": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "DNS namespace labels.",
+                  "properties": {
+                    "kubernetes.io/metadata.name": {
+                      "default": "kube-system",
+                      "required": [],
+                      "title": "kubernetes.io/metadata.name"
+                    }
+                  },
+                  "required": [],
+                  "title": "namespaceSelector",
+                  "type": "object"
+                },
+                "podSelector": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "DNS pod labels.",
+                  "properties": {
+                    "k8s-app": {
+                      "default": "kube-dns",
+                      "required": [],
+                      "title": "k8s-app"
+                    }
+                  },
+                  "required": [],
+                  "title": "podSelector",
+                  "type": "object"
+                }
+              },
+              "required": [],
+              "title": "dns",
+              "type": "object"
+            },
+            "enabled": {
+              "default": true,
+              "description": "Create sandbox policy resources when sandbox is enabled.",
+              "required": [],
+              "title": "enabled",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "enabled",
+            "dns",
+            "cilium"
+          ],
+          "title": "networkPolicy",
+          "type": "object"
+        }
+      },
+      "required": [
+        "enabled",
+        "namespace",
+        "networkPolicy"
+      ],
+      "title": "sandbox",
+      "type": "object"
+    },
+    "secrets": {
+      "description": "Existing Secret names, each mounted through envFrom on every pod (DATABASE_URL, CHAMVI_TOKENS, provider API keys, GITHUB_*); this chart creates no Secret.",
+      "items": {
+        "minLength": 1,
+        "required": [],
+        "type": "string"
+      },
+      "required": [],
+      "title": "secrets",
+      "type": "array"
+    },
+    "service": {
+      "additionalProperties": false,
+      "description": "Application Service settings.",
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Service annotations.",
+          "required": [],
+          "title": "annotations",
+          "type": "object"
+        },
+        "port": {
+          "default": 80,
+          "description": "Service port, targeting the named http container port.",
+          "maximum": 65535,
+          "minimum": 1,
+          "required": [],
+          "title": "port",
+          "type": "integer"
+        },
+        "type": {
+          "default": "ClusterIP",
+          "description": "Service type.",
+          "enum": [
+            "ClusterIP",
+            "NodePort",
+            "LoadBalancer"
+          ],
+          "required": [],
+          "title": "type"
+        }
+      },
+      "required": [],
+      "title": "service",
+      "type": "object"
+    },
+    "serviceAccount": {
+      "additionalProperties": false,
+      "description": "Application ServiceAccount settings.",
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "ServiceAccount annotations.",
+          "required": [],
+          "title": "annotations",
+          "type": "object"
+        },
+        "create": {
+          "default": true,
+          "description": "Create a dedicated ServiceAccount.",
+          "required": [],
+          "title": "create",
+          "type": "boolean"
+        },
+        "name": {
+          "default": "",
+          "description": "Existing or custom ServiceAccount name; empty chooses the release name or default.",
+          "required": [],
+          "title": "name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "create",
+        "name"
+      ],
+      "title": "serviceAccount",
+      "type": "object"
+    },
+    "serviceMonitor": {
+      "additionalProperties": false,
+      "description": "Optional Prometheus monitoring integration.",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "Create a ServiceMonitor when its API is available.",
+          "required": [],
+          "title": "enabled",
+          "type": "boolean"
+        },
+        "interval": {
+          "default": "",
+          "description": "Prometheus scrape interval; empty uses its default.",
+          "required": [],
+          "title": "interval",
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Additional ServiceMonitor labels.",
+          "required": [],
+          "title": "labels",
+          "type": "object"
+        },
+        "scrapeTimeout": {
+          "default": "",
+          "description": "Prometheus scrape timeout; empty uses its default.",
+          "required": [],
+          "title": "scrapeTimeout",
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled",
+        "interval",
+        "scrapeTimeout"
+      ],
+      "title": "serviceMonitor",
+      "type": "object"
+    },
+    "strategy": {
+      "additionalProperties": true,
+      "description": "Deployment strategy; RollingUpdate may set rollingUpdate options.",
+      "properties": {
+        "type": {
+          "enum": [
+            "Recreate",
+            "RollingUpdate"
+          ],
+          "required": [],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "title": "strategy",
+      "type": "object"
+    },
+    "terminationGracePeriodSeconds": {
+      "default": 120,
+      "description": "Pod shutdown grace; must exceed preStop plus CLI force-exit timeout.",
+      "maximum": 2147483647,
+      "minimum": 1,
+      "required": [],
+      "title": "terminationGracePeriodSeconds",
+      "type": "integer"
+    },
+    "tests": {
+      "additionalProperties": false,
+      "description": "Enable the Helm readiness test hook.",
+      "properties": {
+        "enabled": {
+          "required": [],
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "title": "tests",
+      "type": "object"
+    },
+    "tolerations": {
+      "description": "Kubernetes tolerations.",
+      "items": {
+        "additionalProperties": true,
+        "required": [],
+        "type": "object"
+      },
+      "required": [],
+      "title": "tolerations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "nameOverride",
+    "fullnameOverride",
+    "image",
+    "basePath",
+    "probes",
+    "serviceAccount",
+    "service",
+    "ingress",
+    "cronJob",
+    "sandbox",
+    "serviceMonitor"
+  ],
+  "type": "object"
+}
