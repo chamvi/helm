@@ -11,7 +11,10 @@
         "charts/agent-app": {
             "component": "agent-app",
             "release-type": "helm",
-            "skip-github-release": true
+            "skip-github-release": true,
+            "extra-files": [
+                "README.md"
+            ]
         }
     },
     "plugins": [

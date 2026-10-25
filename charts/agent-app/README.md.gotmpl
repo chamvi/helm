@@ -2,7 +2,8 @@
 
 {{ template "chart.deprecationWarning" . }}
 
-{{ template "chart.badgesSection" . }}
+![Version](https://img.shields.io/badge/Version-{{ template "chart.version" . }}?style=flat-square&color=informational) <!-- x-release-please-version -->
+{{ template "chart.typeBadge" . }}
 
 {{ template "chart.description" . }}
 
@@ -12,9 +13,11 @@ the RBAC and egress policy for Kubernetes sandbox pods, and an optional ServiceM
 
 ## Install
 
+<!-- x-release-please-start-version -->
 ```sh
-helm install triage oci://ghcr.io/chamvi/helm/agent-app --version 0.1.0 -n agents -f values.yaml
+helm install triage oci://ghcr.io/chamvi/helm/agent-app --version {{ template "chart.version" . }} -n agents -f values.yaml
 ```
+<!-- x-release-please-end -->
 
 The smallest values file names the agent image and the Secret holding its credentials:
 
@@ -40,7 +43,7 @@ spec:
     interval: 1h
     url: oci://ghcr.io/chamvi/helm/agent-app
     ref:
-        semver: '>=0.1.0 <0.2.0'
+        semver: '0.1.x'
     layerSelector:
         mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
         operation: copy

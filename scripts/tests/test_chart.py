@@ -212,7 +212,8 @@ class ChartContract(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             result = subprocess.run(["helm", "package", str(CHART), "--destination", folder], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            docs = documents(render(chart=Path(folder) / "agent-app-0.1.0.tgz"))
+            version = yaml.safe_load((CHART / "Chart.yaml").read_text())["version"]
+            docs = documents(render(chart=Path(folder) / f"agent-app-{version}.tgz"))
             hooks = [d for d in docs if d["kind"] == "Pod"]
             self.assertEqual(len(hooks), 1)
             self.assertEqual(hooks[0]["metadata"]["annotations"]["helm.sh/hook"], "test")

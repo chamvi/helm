@@ -23,12 +23,34 @@ class Release(unittest.TestCase):
         self.assertEqual(config["packages"]["."], {"component": "root", "release-type": "simple"})
         self.assertEqual(
             config["packages"]["charts/agent-app"],
-            {"component": "agent-app", "release-type": "helm", "skip-github-release": True},
+            {"component": "agent-app", "release-type": "helm", "skip-github-release": True, "extra-files": ["README.md"]},
         )
         self.assertEqual(
             config["plugins"],
             [{"type": "linked-versions", "groupName": "global", "components": ["root", "agent-app"]}],
         )
+
+    def test_release_please_keeps_every_readme_version_in_step(self):
+        # release-please's helm strategy bumps Chart.yaml only; README.md (an extra-file) changes on annotated lines,
+        # so every chart version in it must sit on such a line, or `make drift` fails after the release PR.
+        version = yaml.safe_load((ROOT / "charts/agent-app/Chart.yaml").read_text())["version"]
+        template = (ROOT / "charts/agent-app/README.md.gotmpl").read_text()
+        self.assertNotIn("chart.badgesSection", template)
+        self.assertNotIn("chart.versionBadge", template)
+        inside = False
+        found = 0
+        for line in (ROOT / "charts/agent-app/README.md").read_text().splitlines():
+            if "x-release-please-start-version" in line:
+                inside = True
+            elif "x-release-please-end" in line:
+                inside = False
+            elif version in line:
+                found += 1
+                self.assertTrue(inside or "x-release-please-version" in line, line)
+                # The generic updater replaces the first semver of a line and eats a following "-word" as a prerelease.
+                self.assertEqual(line.count(version), 1, line)
+                self.assertFalse(line.split(version, 1)[1][:1] in ("-", "+"), line)
+        self.assertGreater(found, 0)
 
     def test_publish_is_ungated_and_pushes_to_the_chamvi_registry(self):
         workflow = yaml.safe_load((ROOT / ".github/workflows/release.yaml").read_text())
