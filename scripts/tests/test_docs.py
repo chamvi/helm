@@ -1,4 +1,5 @@
 """The docs follow the current chamvi contract, and the README's Flux example renders."""
+import json
 import subprocess
 import tempfile
 from pathlib import Path
@@ -77,6 +78,38 @@ class Docs(unittest.TestCase):
         env = {e["name"]: e["value"] for e in container["env"]}
         self.assertEqual(env["CHAMVI_PUBLIC_URL"], "https://agents.example.com")
 
+
+
+class SchemaAnnotations(unittest.TestCase):
+    """values.yaml's # @schema blocks and # -- comments survive helm-schema into values.schema.json."""
+
+    def test_every_schema_keyword_is_generated(self):
+        schema = (CHART / "values.schema.json").read_text()
+        keywords = set()
+        inside = False
+        for line in (CHART / "values.yaml").read_text().splitlines():
+            stripped = line.strip()
+            if stripped == "# @schema":
+                inside = not inside
+            elif inside and stripped.startswith("# ") and ":" in stripped and not stripped.startswith("# -"):
+                keywords.add(stripped[2:].split(":", 1)[0].strip())
+        for keyword in sorted(keywords):
+            with self.subTest(keyword=keyword):
+                self.assertIn(f'"{keyword}"', schema)
+
+    def test_descriptions_are_not_cut(self):
+        def walk(node):
+            if isinstance(node, dict):
+                if isinstance(node.get("description"), str):
+                    yield node["description"]
+                for value in node.values():
+                    yield from walk(value)
+            elif isinstance(node, list):
+                for value in node:
+                    yield from walk(value)
+        for description in walk(json.loads((CHART / "values.schema.json").read_text())):
+            with self.subTest(description=description):
+                self.assertEqual(description.count("`") % 2, 0)
 
 if __name__ == "__main__":
     unittest.main()

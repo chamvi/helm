@@ -427,7 +427,7 @@
     },
     "sandbox": {
       "additionalProperties": false,
-      "description": "Kubernetes sandbox pods (`",
+      "description": "Kubernetes sandbox pods (the chamvi sandbox-k8s provider): a Role and RoleBinding in `sandbox.namespace`, the egress policy, and `CHAMVI_SANDBOX_NAMESPACE` on the app.",
       "properties": {
         "enabled": {
           "default": false,
