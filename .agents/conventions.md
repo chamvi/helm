@@ -14,6 +14,9 @@
   yet: GitHub release `agent-app-<version>`, `index.yaml` on the `gh-pages` branch (must exist), OCI push to
   `ghcr.io/chamvi/helm`. The job is ungated on release-please outputs (the chart sets `skip-github-release`, so they
   never report it) and idempotent; `workflow_dispatch` is the recovery path.
+- **Before the first merge** (owner's go): create the `gh-pages` branch on origin, or the first publish fails at
+  hevi's `cr index`: `git switch --orphan gh-pages && git commit --allow-empty -m "chore: init gh-pages" &&
+  git push -u origin gh-pages && git switch master`.
 - **Bootstrap.** The first merge publishes `agent-app-0.1.0` straight from master while release-please, on the same push,
   sees `feat(agent-app)` commits and no release tag and would open a 0.1.1 release PR. The first PR after that merge
   (owner's go) is `chore(agent-app): pin release-please bootstrap`, setting `"bootstrap-sha"` in
