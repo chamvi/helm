@@ -50,6 +50,8 @@ class SecurityContract(unittest.TestCase):
             ({"enabled": True, "namespace": "agents"}, "sandbox.namespace"),
             ({**SANDBOX, "networkPolicy": {"clusterCIDRs": ["::/0"]}}, "clusterCIDRs"),
             ({**SANDBOX, "networkPolicy": {"clusterCIDRs": ["999.0.0.0/8"]}}, "clusterCIDRs"),
+            ({**SANDBOX, "networkPolicy": {"clusterCIDRs": ["0.0.0.0/0"]}}, "clusterCIDRs[0] must be narrower than 0.0.0.0/0"),
+            ({**SANDBOX, "networkPolicy": {"clusterCIDRs": ["10.0.0.0/8", "10.0.0.0/0"]}}, "clusterCIDRs[1] must be narrower than 0.0.0.0/0"),
             ({**SANDBOX, "networkPolicy": {"cilium": {"enabled": True}}}, "CiliumNetworkPolicy"),
             ({**SANDBOX, "networkPolicy": {"enabled": False, "cilium": {"enabled": True}}}, "cilium.enabled"),
         ]

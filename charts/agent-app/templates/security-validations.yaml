@@ -13,6 +13,7 @@
 {{- if not (kindIs "slice" $np.clusterCIDRs) -}}{{- fail "agent-app: sandbox.networkPolicy.clusterCIDRs must be an IPv4 CIDR list." -}}{{- end -}}
 {{- range $i, $cidr := $np.clusterCIDRs -}}
 {{- if not (and (kindIs "string" $cidr) (regexMatch "^([0-9]{1,3}\\.){3}[0-9]{1,3}/([0-9]|[12][0-9]|3[0-2])$" (toString $cidr))) -}}{{- fail (printf "agent-app: sandbox.networkPolicy.clusterCIDRs[%d] must be an IPv4 CIDR." $i) -}}{{- end -}}
+{{- if eq (last (splitList "/" $cidr)) "0" -}}{{- fail (printf "agent-app: sandbox.networkPolicy.clusterCIDRs[%d] must be narrower than 0.0.0.0/0; list your cluster ranges, not the whole address space." $i) -}}{{- end -}}
 {{- range (splitList "." (first (splitList "/" $cidr))) -}}
 {{- if gt (int .) 255 -}}{{- fail (printf "agent-app: sandbox.networkPolicy.clusterCIDRs[%d] must contain IPv4 octets from 0 to 255." $i) -}}{{- end -}}
 {{- end -}}
