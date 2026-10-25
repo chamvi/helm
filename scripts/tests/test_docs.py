@@ -29,7 +29,23 @@ def flux_values():
     raise AssertionError("README.md has no HelmRelease example")
 
 
+def flux_examples(path):
+    docs = [doc for block in path.read_text().split("```yaml")[1:] for doc in yaml.safe_load_all(block.split("```")[0]) if doc]
+    source = next((d for d in docs if d.get("kind") == "OCIRepository"), None)
+    release = next((d for d in docs if d.get("kind") == "HelmRelease"), None)
+    return source, release
+
+
 class Docs(unittest.TestCase):
+    def test_flux_examples_keep_the_chart_source_next_to_the_release(self):
+        # helm-controller with --no-cross-namespace-refs=true refuses a chartRef into another namespace.
+        for path in [ROOT / "README.md", CHART / "README.md.gotmpl", CHART / "README.md"]:
+            source, release = flux_examples(path)
+            self.assertIsNotNone(source, f"{path.relative_to(ROOT)} has no OCIRepository example")
+            namespace = release["metadata"]["namespace"]
+            self.assertEqual(source["metadata"]["namespace"], namespace, path.relative_to(ROOT))
+            self.assertEqual(release["spec"]["chartRef"]["namespace"], namespace, path.relative_to(ROOT))
+
     def test_no_stale_contract_names(self):
         for path in text_files():
             text = path.read_text(errors="ignore")

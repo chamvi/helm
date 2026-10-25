@@ -27,14 +27,15 @@ secrets: [triage-env]
 
 ### Flux
 
-The chart is a public OCI artifact, so the `OCIRepository` needs no `secretRef`:
+The chart is a public OCI artifact, so the `OCIRepository` needs no `secretRef`. It lives next to the `HelmRelease` in
+the app's namespace, so the `chartRef` works under helm-controller's `--no-cross-namespace-refs=true` too:
 
 ```yaml
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
     name: agent-app
-    namespace: flux-system
+    namespace: agents
 spec:
     interval: 1h
     url: oci://ghcr.io/chamvi/helm/agent-app
@@ -54,7 +55,7 @@ spec:
     chartRef:
         kind: OCIRepository
         name: agent-app
-        namespace: flux-system
+        namespace: agents
     values:
         image:
             repository: ghcr.io/acme/triage # {"$imagepolicy": "flux-system:triage:name"}

@@ -29,14 +29,15 @@ helm install triage oci://ghcr.io/chamvi/helm/agent-app --version 0.1.0 -n agent
     --set 'secrets[0]=triage-env'
 ```
 
-With Flux, point an `OCIRepository` at the chart and a `HelmRelease` at the repository:
+With Flux, point an `OCIRepository` at the chart and a `HelmRelease` at the repository. Both live in the app's namespace,
+so the `chartRef` works under helm-controller's `--no-cross-namespace-refs=true` too:
 
 ```yaml
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
     name: agent-app
-    namespace: flux-system
+    namespace: agents
 spec:
     interval: 1h
     url: oci://ghcr.io/chamvi/helm/agent-app
@@ -56,7 +57,7 @@ spec:
     chartRef:
         kind: OCIRepository
         name: agent-app
-        namespace: flux-system
+        namespace: agents
     values:
         image:
             repository: ghcr.io/acme/triage
