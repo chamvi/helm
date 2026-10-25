@@ -1,6 +1,6 @@
 # agent-app
 
-![Version](https://img.shields.io/badge/Version-0.1.0?style=flat-square&color=informational) <!-- x-release-please-version -->
+![Version](https://img.shields.io/badge/Version-0.1.1?style=flat-square&color=informational) <!-- x-release-please-version -->
 ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 Deploys a chamvi agent app (one image running `chamvi start`), with optional run-job CronJobs and the RBAC and egress policy for Kubernetes sandbox pods.
@@ -13,7 +13,7 @@ the RBAC and egress policy for Kubernetes sandbox pods, and an optional ServiceM
 
 <!-- x-release-please-start-version -->
 ```sh
-helm install triage oci://ghcr.io/chamvi/helm/agent-app --version 0.1.0 -n agents -f values.yaml
+helm install triage oci://ghcr.io/chamvi/helm/agent-app --version 0.1.1 -n agents -f values.yaml
 ```
 <!-- x-release-please-end -->
 
