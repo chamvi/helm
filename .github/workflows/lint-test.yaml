@@ -84,23 +84,12 @@ jobs:
         working-directory: ./charts
 
   # The fixture app (ci/app) installs the published @chamvi packages from npm on the
-  # ghcr.io/chamvi/node:24 base; its run-job and approval-link checks run here.
+  # public ghcr.io/chamvi/node:24 base; its run-job and approval-link checks run here.
   fixture:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: read
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-
-      # ghcr.io/chamvi/node may be private; a read-only login pulls it either way.
-      - name: Log in to ghcr.io
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Helm
         uses: azure/setup-helm@v5
@@ -121,9 +110,6 @@ jobs:
   install:
     runs-on: ubuntu-latest
     needs: [lint, fixture]
-    permissions:
-      contents: read
-      packages: read
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -151,15 +137,6 @@ jobs:
       - name: Create kind cluster
         if: steps.list-changed.outputs.changed == 'true'
         uses: helm/kind-action@v1
-
-      # ghcr.io/chamvi/node may be private; a read-only login pulls it either way.
-      - name: Log in to ghcr.io
-        if: steps.list-changed.outputs.changed == 'true'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and load the fixture image
         if: steps.list-changed.outputs.changed == 'true'
