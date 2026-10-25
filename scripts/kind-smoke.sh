@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Smoke test on kind, after `ct install`: a CronJob-triggered run-job completes, and the
-# sandbox NetworkPolicy lets a sandbox-labelled pod reach https://github.com but not the
-# Kubernetes API server. Needs: the chamvi-ci/app:ci image loaded into kind and the
+# sandbox NetworkPolicy lets a sandbox-labelled pod reach https://github.com but not a
+# cluster pod on TCP 443. Needs: the chamvi-ci/app:ci image loaded into kind and the
 # namespace chamvi-sandbox-ci (the lint-test workflow creates both).
 set -euo pipefail
 
@@ -10,6 +10,7 @@ NAMESPACE=smoke
 SANDBOX_NAMESPACE=chamvi-sandbox-ci
 RELEASE=smoke
 CURL_IMAGE=curlimages/curl:8.22.0
+APP_IMAGE=chamvi-ci/app:ci
 
 dump() {
     local status=$?
@@ -42,15 +43,53 @@ kubectl -n "$NAMESPACE" create job ping-now --from="cronjob/$RELEASE-agent-app-p
 kubectl -n "$NAMESPACE" wait --for=condition=complete job/ping-now --timeout=180s
 kubectl -n "$NAMESPACE" logs job/ping-now | grep -E '^ping: completed \(run [0-9a-f-]+\)$'
 
-echo "3. the sandbox NetworkPolicy allows https://github.com and blocks the API server"
-kubectl -n "$SANDBOX_NAMESPACE" apply -f - <<EOF
+echo "3. the sandbox NetworkPolicy allows https://github.com and blocks cluster addresses"
+# The negative target is a pod IP on TCP 443 (inside 10.0.0.0/8 on kind), not the API
+# server: on a single-node cluster the API server is the pod's own node, and NetworkPolicy
+# implementations do not police pod-to-node traffic. A control pod without the sandbox
+# labels must reach the target, so a target that never came up cannot pass the check.
+kubectl -n "$NAMESPACE" apply -f - <<EOF
 apiVersion: v1
 kind: Pod
 metadata:
-  name: egress-probe
+  name: tls-target
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    sysctls:
+      - name: net.ipv4.ip_unprivileged_port_start
+        value: "0"
+  containers:
+    - name: target
+      image: $APP_IMAGE
+      imagePullPolicy: Never
+      args: [node, -e, "require('node:http').createServer((q, s) => s.end('ok')).listen(443)"]
+      readinessProbe:
+        tcpSocket:
+          port: 443
+        periodSeconds: 1
+EOF
+kubectl -n "$NAMESPACE" wait pod/tls-target --for=condition=Ready --timeout=120s
+TARGET="http://$(kubectl -n "$NAMESPACE" get pod tls-target -o jsonpath='{.status.podIP}'):443"
+
+# probe <name> <sandbox: true|false> <shell command>: runs curl in the sandbox namespace and
+# succeeds when the command printed PROBE_OK.
+probe() {
+    local labels=""
+    if [ "$2" = true ]; then
+        labels="app.kubernetes.io/managed-by: chamvi
+    app.kubernetes.io/component: sandbox"
+    else
+        labels="app.kubernetes.io/name: control"
+    fi
+    kubectl -n "$SANDBOX_NAMESPACE" apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: $1
   labels:
-    app.kubernetes.io/managed-by: chamvi
-    app.kubernetes.io/component: sandbox
+    $labels
 spec:
   restartPolicy: Never
   automountServiceAccountToken: false
@@ -68,23 +107,25 @@ spec:
         readOnlyRootFilesystem: true
         capabilities:
           drop: [ALL]
-      command:
-        - sh
-        - -c
-        - >-
-          curl -fsS -m 10 -o /dev/null https://github.com &&
-          ! curl -sk -m 5 -o /dev/null https://kubernetes.default.svc.cluster.local &&
-          echo NP_OK
+      command: [sh, -c, "$3 && echo PROBE_OK"]
 EOF
-kubectl -n "$SANDBOX_NAMESPACE" wait pod/egress-probe --for=jsonpath='{.status.phase}'=Succeeded --timeout=120s || {
-    echo "The egress probe did not succeed: either github.com was unreachable or the API server was reachable." >&2
+    kubectl -n "$SANDBOX_NAMESPACE" wait "pod/$1" --for=jsonpath='{.status.phase}'=Succeeded --timeout=120s || return 1
+    kubectl -n "$SANDBOX_NAMESPACE" logs "pod/$1" | grep -qx PROBE_OK
+}
+
+probe control-probe false "curl -fsS -m 10 -o /dev/null $TARGET" || {
+    echo "The control pod could not reach $TARGET: the negative check below would prove nothing." >&2
+    exit 1
+}
+probe egress-probe true "curl -fsS -m 10 -o /dev/null https://github.com && ! curl -s -m 5 -o /dev/null $TARGET" || {
+    echo "The sandbox probe failed: github.com was unreachable or $TARGET (a cluster pod on TCP 443) was reachable." >&2
     echo "kind enforces NetworkPolicy through kube-network-policies since v0.24.0; check the kind version and CNI." >&2
     exit 1
 }
-kubectl -n "$SANDBOX_NAMESPACE" logs pod/egress-probe | grep -x NP_OK
 
 echo "4. uninstall"
-kubectl -n "$SANDBOX_NAMESPACE" delete pod egress-probe --wait=false
+kubectl -n "$SANDBOX_NAMESPACE" delete pod control-probe egress-probe --wait=false
+kubectl -n "$NAMESPACE" delete pod tls-target --wait=false
 helm uninstall "$RELEASE" -n "$NAMESPACE" --wait
 
 echo "kind smoke OK"
