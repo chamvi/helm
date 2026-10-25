@@ -59,5 +59,15 @@ class CiMatrix(unittest.TestCase):
             self.assertTrue(deps[name].startswith("^0.2."), f"{name} must track the published 0.2 line")
 
 
+    def test_kind_loads_nfnetlink_queue_before_the_cluster_starts(self):
+        # kind's kube-network-policies fails open without the module, so the smoke's
+        # egress check would see an unenforced NetworkPolicy.
+        workflow = yaml.safe_load((ROOT / ".github/workflows/lint-test.yaml").read_text())
+        steps = workflow["jobs"]["install"]["steps"]
+        names = [step.get("uses", step.get("run", "")) for step in steps]
+        load = next(i for i, n in enumerate(names) if "modprobe nfnetlink_queue" in n)
+        kind = next(i for i, n in enumerate(names) if n.startswith("helm/kind-action@"))
+        self.assertLess(load, kind)
+
 if __name__ == "__main__":
     unittest.main()

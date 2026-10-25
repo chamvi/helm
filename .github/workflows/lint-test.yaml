@@ -134,6 +134,12 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # kind enforces NetworkPolicy through kube-network-policies (NFQUEUE); without
+      # this module on the runner it fails open and the smoke's egress check fails.
+      - name: Load nfnetlink_queue for NetworkPolicy enforcement
+        if: steps.list-changed.outputs.changed == 'true'
+        run: sudo modprobe nfnetlink_queue
+
       - name: Create kind cluster
         if: steps.list-changed.outputs.changed == 'true'
         uses: helm/kind-action@v1
