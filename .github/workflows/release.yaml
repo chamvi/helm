@@ -11,14 +11,15 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
-permissions:
-  contents: write
-  packages: write
-  pull-requests: write
+# Each job asks for the scopes it needs; nothing by default.
+permissions: {}
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     if: github.event_name == 'push'
     steps:
       - uses: googleapis/release-please-action@v4
@@ -34,6 +35,10 @@ jobs:
   # and releases), so releases_created never fires for it.
   publish:
     runs-on: ubuntu-latest
+    # contents: GitHub releases and the gh-pages index; packages: the OCI push.
+    permissions:
+      contents: write
+      packages: write
     needs: release-please
     # release-please is skipped on workflow_dispatch, and a skipped dependency
     # would skip this job too without an explicit condition.

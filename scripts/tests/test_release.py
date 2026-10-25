@@ -74,5 +74,12 @@ class Release(unittest.TestCase):
         self.assertEqual(helm["with"]["version"], "v4.3.1")
 
 
+    def test_each_job_gets_only_the_token_scopes_it_needs(self):
+        workflow = yaml.safe_load((ROOT / ".github/workflows/release.yaml").read_text())
+        self.assertEqual(workflow["permissions"], {})
+        jobs = workflow["jobs"]
+        self.assertEqual(jobs["release-please"]["permissions"], {"contents": "write", "pull-requests": "write"})
+        self.assertEqual(jobs["publish"]["permissions"], {"contents": "write", "packages": "write"})
+
 if __name__ == "__main__":
     unittest.main()
