@@ -1,0 +1,15 @@
+.DS_Store
+.idea/
+.vscode/
+.agents/plans/
+*.tgz
+.cr-release-packages/
+.cr-index/
+.hevi/
+charts/*/values.local.yaml
+charts/*/values.personal.yaml
+
+.superpowers/
+.local/
+node_modules/
+__pycache__/
