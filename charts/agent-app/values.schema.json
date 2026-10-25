@@ -476,7 +476,7 @@
               "type": "object"
             },
             "clusterCIDRs": {
-              "description": "Cluster CIDRs excluded from portable public HTTPS egress.",
+              "description": "IPv4 cluster CIDRs (pod, service and node ranges) excluded from portable public HTTPS egress; at least one.",
               "items": {
                 "required": [],
                 "type": "string"
@@ -485,10 +485,30 @@
               "title": "clusterCIDRs",
               "type": "array"
             },
+            "clusterCIDRsIPv6": {
+              "description": "IPv6 cluster CIDRs excluded from portable public HTTPS egress; add globally routable pod, service and node ranges (EKS IPv6, dual-stack); at least one.",
+              "items": {
+                "required": [],
+                "type": "string"
+              },
+              "required": [],
+              "title": "clusterCIDRsIPv6",
+              "type": "array"
+            },
             "dns": {
               "additionalProperties": false,
               "description": "Selectors of DNS pods reachable by sandboxes.",
               "properties": {
+                "ipBlocks": {
+                  "description": "Extra DNS server CIDRs for the portable policy, e.g. NodeLocal DNSCache's `169.254.20.10/32` (a hostNetwork DaemonSet no pod selector matches).",
+                  "items": {
+                    "required": [],
+                    "type": "string"
+                  },
+                  "required": [],
+                  "title": "ipBlocks",
+                  "type": "array"
+                },
                 "namespaceSelector": {
                   "additionalProperties": {
                     "type": "string"
@@ -498,13 +518,10 @@
                     "kubernetes.io/metadata.name": {
                       "default": "kube-system",
                       "required": [],
-                      "title": "kubernetes.io/metadata.name",
-                      "type": "string"
+                      "title": "kubernetes.io/metadata.name"
                     }
                   },
-                  "required": [
-                    "kubernetes.io/metadata.name"
-                  ],
+                  "required": [],
                   "title": "namespaceSelector",
                   "type": "object"
                 },
@@ -517,13 +534,10 @@
                     "k8s-app": {
                       "default": "kube-dns",
                       "required": [],
-                      "title": "k8s-app",
-                      "type": "string"
+                      "title": "k8s-app"
                     }
                   },
-                  "required": [
-                    "k8s-app"
-                  ],
+                  "required": [],
                   "title": "podSelector",
                   "type": "object"
                 }

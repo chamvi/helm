@@ -20,6 +20,10 @@ spec:
           podSelector:
             matchLabels:
               {{- include "agent-app.stringMap" .Values.sandbox.networkPolicy.dns.podSelector | nindent 14 }}
+        {{- range .Values.sandbox.networkPolicy.dns.ipBlocks }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
       ports:
         - {protocol: UDP, port: 53}
         - {protocol: TCP, port: 53}
@@ -30,7 +34,8 @@ spec:
               {{- toYaml (uniq (append .Values.sandbox.networkPolicy.clusterCIDRs "169.254.169.254/32")) | nindent 14 }}
         - ipBlock:
             cidr: '::/0'
-            except: ['fc00::/7', 'fe80::/10']
+            except:
+              {{- toYaml (uniq .Values.sandbox.networkPolicy.clusterCIDRsIPv6) | nindent 14 }}
       ports:
         - {protocol: TCP, port: 443}
 {{- end }}

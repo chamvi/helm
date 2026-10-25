@@ -166,12 +166,15 @@ the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or `sandboxModule({ provider:
   `sandbox.enabled`; the helm test pod never does, and the provider's sandbox pods mount none.
 - The egress policy selects pods labelled `app.kubernetes.io/managed-by: chamvi` and `app.kubernetes.io/component: sandbox`
   (the app pod is `component: app`). The portable `NetworkPolicy` denies all ingress and allows DNS to the pods of
-  `networkPolicy.dns` (kube-dns by default; point it at NodeLocal DNSCache if you run it) plus TCP 443 to every address
-  outside `networkPolicy.clusterCIDRs` and `169.254.169.254/32` (IPv6: outside `fc00::/7`, `fe80::/10`).
+  `networkPolicy.dns` (kube-dns by default, selected by any labels; NodeLocal DNSCache runs on the host network, so add
+  its address to `networkPolicy.dns.ipBlocks`, e.g. `169.254.20.10/32`) plus TCP 443 to every address outside
+  `networkPolicy.clusterCIDRs` and `169.254.169.254/32` (IPv6: outside `networkPolicy.clusterCIDRsIPv6`, default
+  `fc00::/7`, `fe80::/10`). Both lists must hold at least one range.
 - Limits of the portable policy: it needs an enforcing CNI, cannot name hosts, and how `ipBlock` treats pod and service
   addresses is CNI-defined. Most CNIs evaluate egress after service translation, so a managed cluster's public API
   endpoint is not covered by private ranges; sandbox pods mount no token, which leaves anonymous access only. List every
-  pod, service and node range of your cluster in `clusterCIDRs`.
+  pod, service and node range of your cluster in `clusterCIDRs`; on IPv6 or dual-stack clusters with globally routable
+  pod or node addresses (EKS IPv6 mode, GKE external IPv6), add those ranges to `clusterCIDRsIPv6` too.
 - `networkPolicy.cilium.enabled` renders a `CiliumNetworkPolicy` **instead of** the portable policy (policies are
   allow-lists whose union applies, so both together would void the FQDN list): deny-all ingress, the DNS proxy rule
   and TCP 443 to `cilium.fqdns` only. The render fails when the cluster serves no `cilium.io/v2` API.

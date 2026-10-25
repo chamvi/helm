@@ -377,12 +377,21 @@ sandbox:
         # items:
         #   type: string
         # @schema
-        # -- Cluster CIDRs excluded from portable public HTTPS egress.
+        # -- IPv4 cluster CIDRs (pod, service and node ranges) excluded from portable public HTTPS egress; at least one.
         clusterCIDRs:
         - 10.0.0.0/8
         - 172.16.0.0/12
         - 192.168.0.0/16
         - 100.64.0.0/10
+        # @schema
+        # type: array
+        # items:
+        #   type: string
+        # @schema
+        # -- IPv6 cluster CIDRs excluded from portable public HTTPS egress; add globally routable pod, service and node ranges (EKS IPv6, dual-stack); at least one.
+        clusterCIDRsIPv6:
+        - fc00::/7
+        - fe80::/10
         # -- Selectors of DNS pods reachable by sandboxes.
         dns:
             # @schema
@@ -392,6 +401,9 @@ sandbox:
             # @schema
             # -- DNS namespace labels.
             namespaceSelector:
+                # @schema
+                # required: false
+                # @schema
                 kubernetes.io/metadata.name: kube-system
             # @schema
             # type: object
@@ -400,7 +412,17 @@ sandbox:
             # @schema
             # -- DNS pod labels.
             podSelector:
+                # @schema
+                # required: false
+                # @schema
                 k8s-app: kube-dns
+            # @schema
+            # type: array
+            # items:
+            #   type: string
+            # @schema
+            # -- Extra DNS server CIDRs for the portable policy, e.g. NodeLocal DNSCache's `169.254.20.10/32` (a hostNetwork DaemonSet no pod selector matches).
+            ipBlocks: []
         # -- Optional Cilium replacement policy.
         cilium:
             # -- Use FQDN policy instead of the portable NetworkPolicy.

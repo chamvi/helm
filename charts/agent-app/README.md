@@ -164,12 +164,15 @@ the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or `sandboxModule({ provider:
   `sandbox.enabled`; the helm test pod never does, and the provider's sandbox pods mount none.
 - The egress policy selects pods labelled `app.kubernetes.io/managed-by: chamvi` and `app.kubernetes.io/component: sandbox`
   (the app pod is `component: app`). The portable `NetworkPolicy` denies all ingress and allows DNS to the pods of
-  `networkPolicy.dns` (kube-dns by default; point it at NodeLocal DNSCache if you run it) plus TCP 443 to every address
-  outside `networkPolicy.clusterCIDRs` and `169.254.169.254/32` (IPv6: outside `fc00::/7`, `fe80::/10`).
+  `networkPolicy.dns` (kube-dns by default, selected by any labels; NodeLocal DNSCache runs on the host network, so add
+  its address to `networkPolicy.dns.ipBlocks`, e.g. `169.254.20.10/32`) plus TCP 443 to every address outside
+  `networkPolicy.clusterCIDRs` and `169.254.169.254/32` (IPv6: outside `networkPolicy.clusterCIDRsIPv6`, default
+  `fc00::/7`, `fe80::/10`). Both lists must hold at least one range.
 - Limits of the portable policy: it needs an enforcing CNI, cannot name hosts, and how `ipBlock` treats pod and service
   addresses is CNI-defined. Most CNIs evaluate egress after service translation, so a managed cluster's public API
   endpoint is not covered by private ranges; sandbox pods mount no token, which leaves anonymous access only. List every
-  pod, service and node range of your cluster in `clusterCIDRs`.
+  pod, service and node range of your cluster in `clusterCIDRs`; on IPv6 or dual-stack clusters with globally routable
+  pod or node addresses (EKS IPv6 mode, GKE external IPv6), add those ranges to `clusterCIDRsIPv6` too.
 - `networkPolicy.cilium.enabled` renders a `CiliumNetworkPolicy` **instead of** the portable policy (policies are
   allow-lists whose union applies, so both together would void the FQDN list): deny-all ingress, the DNS proxy rule
   and TCP 443 to `cilium.fqdns` only. The render fails when the cluster serves no `cilium.io/v2` API.
@@ -240,15 +243,17 @@ Kubernetes: `>=1.30.0-0`
 | probes.startup.timeoutSeconds | int | `2` | Startup request timeout in seconds. |
 | replicas | int | `1` | Application replicas; more than one requires a shared database. |
 | resources | object | `{}` | Application resource requests and limits. |
-| sandbox | object | `{"enabled":false,"namespace":"","networkPolicy":{"cilium":{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org"]},"clusterCIDRs":["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"],"dns":{"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}},"enabled":true}}` | Kubernetes sandbox pods (`@chamvi/sandbox-k8s`): a Role and RoleBinding in `sandbox.namespace`, the egress policy, and `CHAMVI_SANDBOX_NAMESPACE` on the app. |
+| sandbox | object | `{"enabled":false,"namespace":"","networkPolicy":{"cilium":{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org"]},"clusterCIDRs":["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"],"clusterCIDRsIPv6":["fc00::/7","fe80::/10"],"dns":{"ipBlocks":[],"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}},"enabled":true}}` | Kubernetes sandbox pods (`@chamvi/sandbox-k8s`): a Role and RoleBinding in `sandbox.namespace`, the egress policy, and `CHAMVI_SANDBOX_NAMESPACE` on the app. |
 | sandbox.enabled | bool | `false` | Grant the app's ServiceAccount the sandbox Role and mount its token. Select the provider in the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or the module option). |
 | sandbox.namespace | string | `""` | Namespace of the sandbox pods; must exist and differ from the release namespace. |
-| sandbox.networkPolicy | object | `{"cilium":{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org"]},"clusterCIDRs":["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"],"dns":{"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}},"enabled":true}` | Sandbox egress controls. |
+| sandbox.networkPolicy | object | `{"cilium":{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org"]},"clusterCIDRs":["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"],"clusterCIDRsIPv6":["fc00::/7","fe80::/10"],"dns":{"ipBlocks":[],"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}},"enabled":true}` | Sandbox egress controls. |
 | sandbox.networkPolicy.cilium | object | `{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org"]}` | Optional Cilium replacement policy. |
 | sandbox.networkPolicy.cilium.enabled | bool | `false` | Use FQDN policy instead of the portable NetworkPolicy. |
 | sandbox.networkPolicy.cilium.fqdns | list | `["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org"]` | Allowed HTTPS DNS names and patterns. |
-| sandbox.networkPolicy.clusterCIDRs | list | `["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"]` | Cluster CIDRs excluded from portable public HTTPS egress. |
-| sandbox.networkPolicy.dns | object | `{"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}}` | Selectors of DNS pods reachable by sandboxes. |
+| sandbox.networkPolicy.clusterCIDRs | list | `["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"]` | IPv4 cluster CIDRs (pod, service and node ranges) excluded from portable public HTTPS egress; at least one. |
+| sandbox.networkPolicy.clusterCIDRsIPv6 | list | `["fc00::/7","fe80::/10"]` | IPv6 cluster CIDRs excluded from portable public HTTPS egress; add globally routable pod, service and node ranges (EKS IPv6, dual-stack); at least one. |
+| sandbox.networkPolicy.dns | object | `{"ipBlocks":[],"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}}` | Selectors of DNS pods reachable by sandboxes. |
+| sandbox.networkPolicy.dns.ipBlocks | list | `[]` | Extra DNS server CIDRs for the portable policy, e.g. NodeLocal DNSCache's `169.254.20.10/32` (a hostNetwork DaemonSet no pod selector matches). |
 | sandbox.networkPolicy.dns.namespaceSelector | object | `{"kubernetes.io/metadata.name":"kube-system"}` | DNS namespace labels. |
 | sandbox.networkPolicy.dns.podSelector | object | `{"k8s-app":"kube-dns"}` | DNS pod labels. |
 | sandbox.networkPolicy.enabled | bool | `true` | Create sandbox policy resources when sandbox is enabled. |
