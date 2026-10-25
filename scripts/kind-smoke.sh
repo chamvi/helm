@@ -12,7 +12,7 @@ RELEASE=smoke
 CURL_IMAGE=curlimages/curl:8.22.0
 APP_IMAGE=chamvi-ci/app:ci
 
-dump() {
+on_exit() {
     local status=$?
     if [ "$status" -ne 0 ]; then
         echo "kind-smoke failed (exit $status); pods, logs and events follow." >&2
@@ -24,9 +24,18 @@ dump() {
             done
             kubectl -n "$ns" get events --sort-by=.lastTimestamp >&2 || true
         done
+        # kind enforces NetworkPolicy in kindnet (kube-network-policies).
+        kubectl -n kube-system get pods -o wide >&2 || true
+        kubectl -n kube-system logs -l app=kindnet --tail=200 >&2 || true
     fi
+    # Clean up on success and failure, so a rerun in the same cluster starts fresh.
+    kubectl -n "$SANDBOX_NAMESPACE" delete pod control-probe egress-probe --ignore-not-found --wait=false >/dev/null 2>&1 || true
+    kubectl -n "$NAMESPACE" delete pod tls-target --ignore-not-found --wait=false >/dev/null 2>&1 || true
+    kubectl -n "$NAMESPACE" delete job ping-now --ignore-not-found --wait=false >/dev/null 2>&1 || true
+    helm uninstall "$RELEASE" -n "$NAMESPACE" --wait >/dev/null 2>&1 || true
+    return "$status"
 }
-trap dump EXIT
+trap on_exit EXIT
 
 echo "1. install the chart in CronJob mode with the sandbox policy"
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
@@ -107,25 +116,20 @@ spec:
         readOnlyRootFilesystem: true
         capabilities:
           drop: [ALL]
-      command: [sh, -c, "$3 && echo PROBE_OK"]
+      command: [sh, -c, "$3; echo PROBE_OK"]
 EOF
     kubectl -n "$SANDBOX_NAMESPACE" wait "pod/$1" --for=jsonpath='{.status.phase}'=Succeeded --timeout=120s || return 1
     kubectl -n "$SANDBOX_NAMESPACE" logs "pod/$1" | grep -qx PROBE_OK
 }
 
-probe control-probe false "curl -fsS -m 10 -o /dev/null $TARGET" || {
+probe control-probe false "curl -fsS -m 10 -o /dev/null $TARGET || exit 1" || {
     echo "The control pod could not reach $TARGET: the negative check below would prove nothing." >&2
     exit 1
 }
-probe egress-probe true "curl -fsS -m 10 -o /dev/null https://github.com && ! curl -s -m 5 -o /dev/null $TARGET" || {
+probe egress-probe true "curl -fsS -m 10 -o /dev/null https://github.com || { echo GITHUB_UNREACHABLE; exit 1; }; if curl -s -m 5 -o /dev/null $TARGET; then echo TARGET_REACHABLE; exit 1; fi" || {
     echo "The sandbox probe failed: github.com was unreachable or $TARGET (a cluster pod on TCP 443) was reachable." >&2
     echo "kind enforces NetworkPolicy through kube-network-policies since v0.24.0; check the kind version and CNI." >&2
     exit 1
 }
-
-echo "4. uninstall"
-kubectl -n "$SANDBOX_NAMESPACE" delete pod control-probe egress-probe --wait=false
-kubectl -n "$NAMESPACE" delete pod tls-target --wait=false
-helm uninstall "$RELEASE" -n "$NAMESPACE" --wait
 
 echo "kind smoke OK"
