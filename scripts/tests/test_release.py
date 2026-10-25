@@ -52,6 +52,13 @@ class Release(unittest.TestCase):
                 self.assertFalse(line.split(version, 1)[1][:1] in ("-", "+"), line)
         self.assertGreater(found, 0)
 
+    def test_maintainers_carry_an_email_for_artifacthub(self):
+        # ArtifactHub's Helm tracker drops maintainers without an email.
+        chart = yaml.safe_load((ROOT / "charts/agent-app/Chart.yaml").read_text())
+        self.assertTrue(chart["maintainers"])
+        for maintainer in chart["maintainers"]:
+            self.assertRegex(maintainer.get("email", ""), r"^[^@\s]+@[^@\s]+\.[a-z]+$")
+
     def test_publish_is_ungated_and_pushes_to_the_chamvi_registry(self):
         workflow = yaml.safe_load((ROOT / ".github/workflows/release.yaml").read_text())
         triggers = workflow[True]  # PyYAML reads the bare key `on` as True

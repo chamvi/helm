@@ -12,6 +12,7 @@ sources:
 keywords: [chamvi, agents, ai, llm, automation]
 maintainers:
   - name: tada5hi
+    email: contact@tada5hi.net
     url: https://github.com/tada5hi
 annotations:
   artifacthub.io/license: Apache-2.0
