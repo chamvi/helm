@@ -36,6 +36,30 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content: {name: CHAMVI_FORCE_EXIT_MS, value: '1000000'}
+  - it: accepts whole numbers of a million or more from a values file (float64) in integer guards
+    template: templates/deployment.yaml
+    set:
+      terminationGracePeriodSeconds: 2000000
+      probes.startup.periodSeconds: 1000000
+      preStopSleepSeconds: 1000000
+      replicas: 1000000
+    asserts:
+      - equal: { path: spec.template.spec.terminationGracePeriodSeconds, value: 2000000 }
+      - equal: { path: 'spec.template.spec.containers[0].lifecycle.preStop.sleep.seconds', value: 1000000 }
+      - equal: { path: 'spec.template.spec.containers[0].startupProbe.periodSeconds', value: 1000000 }
+      - equal: { path: spec.replicas, value: 1000000 }
+  - it: renders CronJob limits of a million or more from a values file without exponent notation
+    template: templates/cronjob.yaml
+    set:
+      cronJobs:
+        - name: weekly
+          agent: example
+          schedule: "0 8 * * 1"
+      cronJob.activeDeadlineSeconds: 1000000
+      cronJob.startingDeadlineSeconds: 1000000
+    asserts:
+      - equal: { path: spec.startingDeadlineSeconds, value: 1000000 }
+      - equal: { path: spec.jobTemplate.spec.activeDeadlineSeconds, value: 1000000 }
   - it: omits preStop at zero and accepts extra probe timings
     template: templates/deployment.yaml
     set:

@@ -1,5 +1,5 @@
 In-cluster readiness URL:
-  http://{{ include "agent-app.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}{{ include "agent-app.basePath" . }}/readyz
+  http://{{ include "agent-app.fullname" . }}.{{ .Release.Namespace }}.svc:{{ include "agent-app.scalar" .Values.service.port }}{{ include "agent-app.basePath" . }}/readyz
 
 Run the Node readiness probe through the Service:
   helm test {{ .Release.Name }} --namespace {{ .Release.Namespace }}

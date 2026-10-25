@@ -44,7 +44,7 @@
 {{- if and (hasKey $v.env "HOST") (not (has (toString $v.env.HOST) (list "" "0.0.0.0" "::"))) -}}{{- fail "agent-app: env.HOST must be 0.0.0.0 (IPv4, the default) or :: (IPv6 and dual-stack); the kubelet probes the pod address." -}}{{- end -}}
 {{- $force := "90000" -}}
 {{- if hasKey $v.env "CHAMVI_FORCE_EXIT_MS" -}}
-{{- $input := include "agent-app.envValue" $v.env.CHAMVI_FORCE_EXIT_MS -}}
+{{- $input := include "agent-app.scalar" $v.env.CHAMVI_FORCE_EXIT_MS -}}
 {{- if ne $input "" -}}
 {{- if not (regexMatch "^[0-9]+$" $input) -}}{{- fail "agent-app: env.CHAMVI_FORCE_EXIT_MS must be an integer in milliseconds." -}}{{- end -}}
 {{- if gt (float64 $input) 2147483647.0 -}}{{- fail "agent-app: env.CHAMVI_FORCE_EXIT_MS must be at most 2147483647; Node timers overflow above this limit." -}}{{- end -}}
@@ -55,7 +55,7 @@
 {{- include "agent-app.integer" (dict "value" $v.preStopSleepSeconds "path" "preStopSleepSeconds" "min" 0 "max" 2147483647) -}}
 {{- include "agent-app.integer" (dict "value" $v.terminationGracePeriodSeconds "path" "terminationGracePeriodSeconds" "min" 1 "max" 2147483647) -}}
 {{- if ge (add (mul (int64 $v.preStopSleepSeconds) 1000) (int64 $force)) (mul (int64 $v.terminationGracePeriodSeconds) 1000) -}}
-{{- fail (printf "agent-app: preStopSleepSeconds (%v s) + CHAMVI_FORCE_EXIT_MS (%s ms) must stay below terminationGracePeriodSeconds (%v s), or the kubelet kills the app before it drained." $v.preStopSleepSeconds $force $v.terminationGracePeriodSeconds) -}}
+{{- fail (printf "agent-app: preStopSleepSeconds (%s s) + CHAMVI_FORCE_EXIT_MS (%s ms) must stay below terminationGracePeriodSeconds (%s s), or the kubelet kills the app before it drained." (include "agent-app.scalar" $v.preStopSleepSeconds) $force (include "agent-app.scalar" $v.terminationGracePeriodSeconds)) -}}
 {{- end -}}
 {{- if not (kindIs "slice" $v.secrets) -}}{{- fail "agent-app: secrets must be a list of existing Secret names." -}}{{- end -}}
 {{- $secrets := dict -}}

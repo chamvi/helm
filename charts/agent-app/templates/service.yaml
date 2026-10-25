@@ -12,7 +12,7 @@ spec:
   type: {{ .Values.service.type }}
   ports:
     - name: http
-      port: {{ .Values.service.port }}
+      port: {{ include "agent-app.scalar" .Values.service.port }}
       targetPort: http
       protocol: TCP
   selector:

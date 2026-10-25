@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "agent-app.labels" (dict "context" . "component" "app") | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicas }}
+  replicas: {{ include "agent-app.scalar" .Values.replicas }}
   strategy:
     {{- toYaml .Values.strategy | nindent 4 }}
   selector:
@@ -39,7 +39,7 @@ spec:
           lifecycle:
             preStop:
               sleep:
-                seconds: {{ .Values.preStopSleepSeconds }}
+                seconds: {{ include "agent-app.scalar" .Values.preStopSleepSeconds }}
           {{- end }}
           {{- range $name, $probe := .Values.probes }}
           {{ $name }}Probe:

@@ -1,6 +1,6 @@
 {{/* Runtime guards remain useful with --skip-schema-validation. Never echo values. */}}
 {{- define "agent-app.integer" -}}
-{{- if not (and (has (kindOf .value) (list "int" "int64" "float64" "float32")) (regexMatch "^[0-9]+$" (toString .value))) -}}
+{{- if not (and (has (kindOf .value) (list "int" "int64" "float64" "float32")) (regexMatch "^[0-9]+$" (include "agent-app.scalar" .value))) -}}
 {{- fail (printf "agent-app: %s must be an integer; use an unquoted whole number." .path) -}}
 {{- end -}}
 {{- if or (lt (float64 .value) (float64 .min)) (gt (float64 .value) (float64 .max)) -}}

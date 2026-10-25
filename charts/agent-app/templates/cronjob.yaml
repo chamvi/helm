@@ -15,14 +15,14 @@ spec:
   suspend: {{ .suspend }}
   {{- end }}
   concurrencyPolicy: Forbid
-  startingDeadlineSeconds: {{ $.Values.cronJob.startingDeadlineSeconds }}
-  successfulJobsHistoryLimit: {{ $.Values.cronJob.successfulJobsHistoryLimit }}
-  failedJobsHistoryLimit: {{ $.Values.cronJob.failedJobsHistoryLimit }}
+  startingDeadlineSeconds: {{ include "agent-app.scalar" $.Values.cronJob.startingDeadlineSeconds }}
+  successfulJobsHistoryLimit: {{ include "agent-app.scalar" $.Values.cronJob.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ include "agent-app.scalar" $.Values.cronJob.failedJobsHistoryLimit }}
   jobTemplate:
     spec:
       backoffLimit: 0
       {{- if gt (int $.Values.cronJob.activeDeadlineSeconds) 0 }}
-      activeDeadlineSeconds: {{ $.Values.cronJob.activeDeadlineSeconds }}
+      activeDeadlineSeconds: {{ include "agent-app.scalar" $.Values.cronJob.activeDeadlineSeconds }}
       {{- end }}
       template:
         metadata:

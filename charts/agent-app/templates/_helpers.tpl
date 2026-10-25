@@ -82,8 +82,8 @@ app.kubernetes.io/managed-by: {{ .context.Release.Service | quote }}
 {{- toJson $names -}}
 {{- end -}}
 
-{{/* Values files and Flux pass numbers as float64, which toString prints as 1.2e+06; toJson keeps 1200000. */}}
-{{- define "agent-app.envValue" -}}
+{{/* Values files and Flux pass numbers as float64, which toString and plain rendering print as 1.2e+06; toJson keeps 1200000. */}}
+{{- define "agent-app.scalar" -}}
 {{- if or (kindIs "float64" .) (kindIs "float32" .) -}}{{- toJson . -}}{{- else -}}{{- toString . -}}{{- end -}}
 {{- end -}}
 
@@ -108,7 +108,7 @@ app.kubernetes.io/managed-by: {{ .context.Release.Service | quote }}
 {{- range $key, $value := .Values.env }}
 {{- if not (and $derivePublicUrl (eq $key "CHAMVI_PUBLIC_URL")) }}
 - name: {{ $key | quote }}
-  value: {{ include "agent-app.envValue" $value | quote }}
+  value: {{ include "agent-app.scalar" $value | quote }}
 {{- end }}
 {{- end -}}
 {{- end -}}
@@ -142,7 +142,7 @@ serviceAccountName: {{ include "agent-app.serviceAccountName" .context | quote }
 automountServiceAccountToken: {{ and (not .test) .context.Values.sandbox.enabled }}
 securityContext:
   {{- include "agent-app.podSecurityContext" .context | nindent 2 }}
-terminationGracePeriodSeconds: {{ .context.Values.terminationGracePeriodSeconds }}
+terminationGracePeriodSeconds: {{ include "agent-app.scalar" .context.Values.terminationGracePeriodSeconds }}
 {{- with .context.Values.imagePullSecrets }}
 imagePullSecrets:
   {{- toYaml . | nindent 2 }}
