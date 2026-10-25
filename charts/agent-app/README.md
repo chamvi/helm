@@ -105,6 +105,10 @@ rendered in name order after the variables the chart owns. The chart refuses an 
 | `CHAMVI_SANDBOX_NAMESPACE` | `sandbox.namespace` | `sandbox.enabled` |
 | `CHAMVI_PUBLIC_URL` | `https://<ingress.host>` with `tls.secretName`, else `http://<ingress.host>` | `ingress.enabled` and no `env.CHAMVI_PUBLIC_URL` (yours wins) |
 
+The app listens on `HOST` `0.0.0.0` (IPv4 only). On an IPv6-only cluster (EKS IPv6 mode) set `env.HOST: "::"`, which
+listens dual-stack where the node kernel has IPv6; the chart refuses any other `HOST`, since the kubelet probes the pod
+address.
+
 The derived `CHAMVI_PUBLIC_URL` is the origin only: the app appends `basePath` once when it builds approval links
 (`<origin><basePath>/ui/approvals?run=<id>&approval=<id>`, ids only, never a credential). When TLS terminates outside
 the Ingress (a load balancer, a default certificate), set `env.CHAMVI_PUBLIC_URL` to the `https://` origin.

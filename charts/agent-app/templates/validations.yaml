@@ -41,6 +41,7 @@
 {{- if not (has (kindOf $value) (list "string" "int" "int64" "float64" "float32" "bool")) -}}{{- fail (printf "agent-app: env.%s must be a scalar; use secrets for credentials." $key) -}}{{- end -}}
 {{- if contains "\u0000" (toString $value) -}}{{- fail (printf "agent-app: env.%s must not contain NUL." $key) -}}{{- end -}}
 {{- end -}}
+{{- if and (hasKey $v.env "HOST") (not (has (toString $v.env.HOST) (list "" "0.0.0.0" "::"))) -}}{{- fail "agent-app: env.HOST must be 0.0.0.0 (IPv4, the default) or :: (IPv6 and dual-stack); the kubelet probes the pod address." -}}{{- end -}}
 {{- $force := "90000" -}}
 {{- if hasKey $v.env "CHAMVI_FORCE_EXIT_MS" -}}
 {{- $input := include "agent-app.envValue" $v.env.CHAMVI_FORCE_EXIT_MS -}}

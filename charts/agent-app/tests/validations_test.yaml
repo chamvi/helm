@@ -35,6 +35,22 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: "agent-app: env.PORT is set by the chart (PORT, CHAMVI_BASE_PATH, CHAMVI_SCHEDULER with cronJobs, CHAMVI_SANDBOX_NAMESPACE with sandbox.enabled); use the matching value instead."
+  - it: refuses a HOST the kubelet probes cannot reach
+    values: [values/base.yaml]
+    set:
+      env:
+        HOST: 127.0.0.1
+    asserts:
+      - failedTemplate:
+          errorMessage: "agent-app: env.HOST must be 0.0.0.0 (IPv4, the default) or :: (IPv6 and dual-stack); the kubelet probes the pod address."
+  - it: accepts the IPv6 wildcard HOST
+    values: [values/base.yaml]
+    set:
+      env:
+        HOST: "::"
+    asserts:
+      - hasDocuments:
+          count: 0
   - it: refuses an invalid env name
     values: [values/base.yaml]
     set:
