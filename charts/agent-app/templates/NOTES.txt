@@ -6,7 +6,7 @@ Run the Node readiness probe through the Service:
 
 {{- if .Values.cronJobs }}
 CronJob mode sets CHAMVI_SCHEDULER=false for the whole Deployment.
-Mirror EVERY cron subscription with a cronJobs entry. Supply DATABASE_URL in an
+Mirror EVERY cron subscription (cron.on()) with a cronJobs entry. Supply DATABASE_URL in an
 existing Secret: MemoryStore is not shared between the Deployment and Jobs.
 {{- end }}
 {{- if gt (int .Values.replicas) 1 }}
@@ -21,10 +21,14 @@ The shutdown guard can read env.CHAMVI_FORCE_EXIT_MS only. A value supplied via
 envFrom Secret is invisible to Helm. Keep preStop plus the effective force-exit
 timeout strictly below terminationGracePeriodSeconds.
 {{- if .Values.sandbox.enabled }}
-Sandbox RBAC and egress policies are NOT included in this chart-core stage.
-Do not deploy sandbox.enabled until the security layer is implemented and
-verified with an enforcing CNI in a separate sandbox namespace.
+Sandbox pods run in namespace {{ .Values.sandbox.namespace }} (create it first and
+label it for Pod Security restricted). The chart grants the app's ServiceAccount
+pods create/get/list/delete and pods/exec get/create there. Select the Kubernetes
+provider in the app: env.CHAMVI_SANDBOX_PROVIDER=kubernetes or sandboxModule({ provider: 'kubernetes' }).
+{{- if .Values.sandbox.networkPolicy.enabled }}
+The sandbox egress policy only takes effect with an enforcing CNI.
 {{- end }}
-{{- if .Values.serviceMonitor.enabled }}
-ServiceMonitor resources are not included in this chart-core stage.
+{{- end }}
+{{- if and .Values.serviceMonitor.enabled (not (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/ServiceMonitor")) }}
+ServiceMonitor skipped: the cluster serves no monitoring.coreos.com/v1 ServiceMonitor API.
 {{- end }}

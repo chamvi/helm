@@ -20,6 +20,8 @@ kind: RoleBinding
 metadata:
   name: {{ $name | quote }}
   namespace: {{ .Values.sandbox.namespace | quote }}
+  labels:
+    {{- include "agent-app.labels" (dict "context" . "component" "sandbox-policy") | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
