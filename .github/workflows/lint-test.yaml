@@ -1,0 +1,158 @@
+name: lint-test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+env:
+  HELM_VERSION: v4.3.1
+  HELM_UNITTEST_URL: https://github.com/helm-unittest/helm-unittest/releases/download/v1.2.1/unittest-1.2.1.tgz
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v5
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      # Helm 4 verifies plugin signatures against a local keyring the runner does not have.
+      - name: Install helm-unittest
+        run: helm plugin install --verify=false "$HELM_UNITTEST_URL"
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      - name: Install Python tools
+        run: pip install PyYAML==6.0.2 yamllint==1.38.0
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2
+
+      - name: Lint
+        run: make lint
+
+      - name: Unit tests
+        run: make unittest
+
+      - name: Contract tests
+        run: make contract
+
+      - name: Render every ci values file
+        run: make template
+
+      - name: Check values coverage
+        run: make lint-values-coverage
+
+      - name: Run chart-testing (lint)
+        run: ct lint --config .github/configs/ct.yaml
+
+      # helm-docs and helm-schema run from their pinned images; a diff means a
+      # values.yaml or README.md.gotmpl change was committed without its output.
+      - name: Check README.md and values.schema.json sync
+        run: make drift
+
+      - name: Shellcheck
+        run: shellcheck scripts/kind-smoke.sh
+
+      - name: Actionlint
+        run: make actionlint
+
+  lint-artifacthub:
+    runs-on: ubuntu-latest
+    container:
+      image: public.ecr.aws/artifacthub/ah:v1.23.0
+      options: --user 1001
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Run ah lint
+        run: ah lint
+        working-directory: ./charts
+
+  # The fixture app (ci/app) installs the published @chamvi packages from npm on the
+  # public ghcr.io/chamvi/node:24 base; its run-job and approval-link checks run here.
+  fixture:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v5
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      - name: Install Python tools
+        run: pip install PyYAML==6.0.2
+
+      - name: Build the fixture image and run the contract tests against it
+        run: make fixture
+
+  install:
+    runs-on: ubuntu-latest
+    needs: [lint, fixture]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # ct install drives this Helm 4 (ct lint with Helm 4.3.1 is verified). Should
+      # ct 3.15 fail to drive Helm 4 here, pin v3.22.1 for this job only.
+      - name: Set up Helm
+        uses: azure/setup-helm@v5
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2
+
+      - name: List changed charts
+        id: list-changed
+        run: |
+          changed=$(ct list-changed --config .github/configs/ct.yaml)
+          if [[ -n "$changed" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create kind cluster
+        if: steps.list-changed.outputs.changed == 'true'
+        uses: helm/kind-action@v1
+
+      - name: Build and load the fixture image
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          docker build -t chamvi-ci/app:ci ci/app
+          kind load docker-image chamvi-ci/app:ci --name chart-testing
+
+      - name: Run chart-testing (install)
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          namespace="agent-app-$(uuidgen | tr '[:upper:]' '[:lower:]')"
+          kubectl create namespace "$namespace"
+          kubectl apply -n "$namespace" -f charts/agent-app/ci/manifests/
+          kubectl create namespace chamvi-sandbox-ci
+          ct install --namespace "$namespace" --config .github/configs/ct.yaml
+
+      - name: Smoke test (CronJob run, sandbox NetworkPolicy)
+        if: steps.list-changed.outputs.changed == 'true'
+        run: scripts/kind-smoke.sh
