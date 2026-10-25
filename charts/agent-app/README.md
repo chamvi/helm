@@ -282,4 +282,5 @@ Kubernetes: `>=1.30.0-0`
 | strategy.type | string | `"Recreate"` | Recreate by default; RollingUpdate supports rollingUpdate options. |
 | terminationGracePeriodSeconds | int | `120` | Pod shutdown grace; must exceed preStop plus CLI force-exit timeout. |
 | tests | object | `{"enabled":true}` | Enable the Helm readiness test hook. |
+| tests.enabled | bool | `true` | Render the helm test pod that fetches `<basePath>/readyz` through the Service. |
 | tolerations | list | `[]` | Kubernetes tolerations. |

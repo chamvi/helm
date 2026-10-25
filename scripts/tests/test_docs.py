@@ -3,6 +3,7 @@ import json
 import subprocess
 import tempfile
 from pathlib import Path
+import re
 import unittest
 
 import yaml
@@ -110,6 +111,23 @@ class SchemaAnnotations(unittest.TestCase):
         for description in walk(json.loads((CHART / "values.schema.json").read_text())):
             with self.subTest(description=description):
                 self.assertEqual(description.count("`") % 2, 0)
+
+
+class ValueRows(unittest.TestCase):
+    def test_every_value_leaf_has_a_readme_row(self):
+        # A leaf without its own `# --` line gets no helm-docs row and no schema description.
+        values = yaml.safe_load((ROOT / "charts/agent-app/values.yaml").read_text())
+        rows = set(re.findall(r"^\| ([^ |]+) \|", (ROOT / "charts/agent-app/README.md").read_text(), re.M))
+
+        def leaves(node, path=""):
+            # Label selectors are free-form maps documented as a whole.
+            if isinstance(node, dict) and node and not path.endswith(("Selector",)):
+                for key, child in node.items():
+                    yield from leaves(child, f"{path}.{key}" if path else key)
+            else:
+                yield path
+
+        self.assertEqual([leaf for leaf in leaves(values) if leaf not in rows], [])
 
 if __name__ == "__main__":
     unittest.main()

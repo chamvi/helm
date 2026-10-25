@@ -461,4 +461,5 @@ serviceMonitor:
 # @schema
 # -- Enable the Helm readiness test hook.
 tests:
+    # -- Render the helm test pod that fetches `<basePath>/readyz` through the Service.
     enabled: true
