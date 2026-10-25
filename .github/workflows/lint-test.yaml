@@ -74,7 +74,7 @@ jobs:
   lint-artifacthub:
     runs-on: ubuntu-latest
     container:
-      image: public.ecr.aws/artifacthub/ah:v1.23.0
+      image: artifacthub/ah:v1.23.0
       options: --user 1001
     steps:
       - name: Checkout
