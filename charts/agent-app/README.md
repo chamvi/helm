@@ -165,7 +165,9 @@ the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or `sandboxModule({ provider:
 `CHAMVI_SANDBOX_NAMESPACE`.
 
 - Create the namespace first, apart from the release namespace (the chart refuses the same one), and label it for
-  Pod Security `restricted`.
+  Pod Security `baseline`: since chamvi 027 workspace pods run as root with a writable root filesystem and a few added
+  capabilities, so `apt` and toolchain installs work. The provider's `user` and `readOnlyRoot` options restore a pod
+  that `restricted` admits.
 - A `Role` there grants `pods` `create`, `get`, `list`, `delete` and `pods/exec` `get`, `create`; a `RoleBinding`
   binds the app's ServiceAccount (release namespace). The app and job pods mount its token only with
   `sandbox.enabled`; the helm test pod never does, and the provider's sandbox pods mount none.
