@@ -13,7 +13,8 @@ The rules below are load-bearing. Each has a helm-unittest suite or a contract t
    `CHAMVI_SANDBOX_NAMESPACE` (with `sandbox.enabled`) and refuses an `env` entry naming one of them.
    `CHAMVI_PUBLIC_URL` is derived from the Ingress (`https://<host>` with `tls.secretName`, else `http://<host>`) only
    when `env.CHAMVI_PUBLIC_URL` is unset or empty; it is the origin only, since the app's `approvalUrlOf()` appends
-   `CHAMVI_BASE_PATH` itself. `env` follows in sorted key order, values as strings.
+   `CHAMVI_BASE_PATH` itself. `CHAMVI_DEPLOYMENT` is the release's full name with `sandbox.enabled`, unless
+   `env.CHAMVI_DEPLOYMENT` is set and non-empty. `env` follows in sorted key order, values as strings.
 3. **Shutdown budget.** preStop `sleep.seconds: 5`, `terminationGracePeriodSeconds: 120`, the CLI's force exit 90 s.
    The render fails unless `preStopSleepSeconds * 1000 + CHAMVI_FORCE_EXIT_MS < terminationGracePeriodSeconds * 1000`
    (only `env.CHAMVI_FORCE_EXIT_MS` is visible to Helm). Probes: startup `<basePath>/healthz` 2 s x 60, liveness
@@ -25,7 +26,7 @@ The rules below are load-bearing. Each has a helm-unittest suite or a contract t
    `CHAMVI_SCHEDULER=false` on the Deployment (its cron channel validates but never fires), so every cron subscription
    needs an entry. `subscription` is one argv element (spaces included) and may not start with `-`.
 6. **Egress union rule.** NetworkPolicies are allow-lists whose union applies. With `sandbox.networkPolicy.cilium.enabled`
-   the portable NetworkPolicy (TCP 443 to every public address) must not render, or the FQDN list restricts nothing.
+   the portable NetworkPolicy (`networkPolicy.ports`, 443 and 80, to every public address) must not render, or the FQDN list restricts nothing.
    Cilium on a cluster without `cilium.io/v2/CiliumNetworkPolicy` fails the render (an egress control that silently
    disappears is worse than a failed release); the ServiceMonitor is skipped without its API instead.
 7. **Sandbox apart.** `sandbox.namespace` must differ from the release namespace. The Role lives there (never a

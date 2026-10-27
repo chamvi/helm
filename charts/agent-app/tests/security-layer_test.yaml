@@ -31,8 +31,28 @@ tests:
       - equal:
           path: spec.egress[1]
           value:
-            toFQDNs: [{matchName: github.com}, {matchPattern: '*.github.com'}, {matchPattern: '*.githubusercontent.com'}, {matchName: registry.npmjs.org}]
-            toPorts: [{ports: [{port: '443', protocol: TCP}]}]
+            toFQDNs:
+              - {matchName: github.com}
+              - {matchPattern: '*.github.com'}
+              - {matchPattern: '*.githubusercontent.com'}
+              - {matchName: registry.npmjs.org}
+              - {matchName: deb.debian.org}
+              - {matchName: mise.jdx.dev}
+              - {matchName: mise-versions.jdx.dev}
+              - {matchName: nodejs.org}
+            toPorts: [{ports: [{port: '443', protocol: TCP}, {port: '80', protocol: TCP}]}]
+  - it: narrows the Cilium ports to networkPolicy.ports
+    template: templates/sandbox-ciliumnetworkpolicy.yaml
+    set:
+      sandbox: {enabled: true, namespace: sandboxes, networkPolicy: {ports: [443], cilium: {enabled: true}}}
+    asserts:
+      - equal: {path: 'spec.egress[1].toPorts', value: [{ports: [{port: '443', protocol: TCP}]}]}
+  - it: narrows the portable ports to networkPolicy.ports
+    template: templates/sandbox-networkpolicy.yaml
+    set:
+      sandbox: {enabled: true, namespace: sandboxes, networkPolicy: {ports: [443]}}
+    asserts:
+      - equal: {path: 'spec.egress[1].ports', value: [{protocol: TCP, port: 443}]}
   - it: never unions the portable allowlist with Cilium
     template: templates/sandbox-networkpolicy.yaml
     set:

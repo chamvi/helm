@@ -373,10 +373,22 @@ sandbox:
         enabled: true
         # @schema
         # type: array
+        # minItems: 1
+        # items:
+        #   type: integer
+        #   minimum: 1
+        #   maximum: 65535
+        # @schema
+        # -- TCP ports sandboxes may reach on public addresses (portable policy) or on `cilium.fqdns` (Cilium). 80 is for Debian's apt sources, which are plain HTTP (apt checks signatures).
+        ports:
+        - 443
+        - 80
+        # @schema
+        # type: array
         # items:
         #   type: string
         # @schema
-        # -- IPv4 cluster CIDRs (pod, service and node ranges) excluded from portable public HTTPS egress; at least one.
+        # -- IPv4 cluster CIDRs (pod, service and node ranges) excluded from portable public egress; at least one.
         clusterCIDRs:
         - 10.0.0.0/8
         - 172.16.0.0/12
@@ -387,7 +399,7 @@ sandbox:
         # items:
         #   type: string
         # @schema
-        # -- IPv6 cluster CIDRs excluded from portable public HTTPS egress; add globally routable pod, service and node ranges (EKS IPv6, dual-stack); at least one.
+        # -- IPv6 cluster CIDRs excluded from portable public egress; add globally routable pod, service and node ranges (EKS IPv6, dual-stack); at least one.
         clusterCIDRsIPv6:
         - fc00::/7
         - fe80::/10
@@ -431,12 +443,16 @@ sandbox:
             # items:
             #   type: string
             # @schema
-            # -- Allowed HTTPS DNS names and patterns.
+            # -- Allowed DNS names and patterns (on `networkPolicy.ports`): GitHub, npm, Debian's apt sources and mise with its default node downloads.
             fqdns:
             - github.com
             - '*.github.com'
             - '*.githubusercontent.com'
             - registry.npmjs.org
+            - deb.debian.org
+            - mise.jdx.dev
+            - mise-versions.jdx.dev
+            - nodejs.org
 # -- Optional Prometheus monitoring integration.
 serviceMonitor:
     # -- Create a ServiceMonitor when its API is available.

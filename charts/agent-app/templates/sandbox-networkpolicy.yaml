@@ -37,5 +37,7 @@ spec:
             except:
               {{- toYaml (uniq .Values.sandbox.networkPolicy.clusterCIDRsIPv6) | nindent 14 }}
       ports:
-        - {protocol: TCP, port: 443}
+        {{- range .Values.sandbox.networkPolicy.ports }}
+        - {protocol: TCP, port: {{ . }}}
+        {{- end }}
 {{- end }}

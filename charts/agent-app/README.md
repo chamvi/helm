@@ -109,6 +109,7 @@ rendered in name order after the variables the chart owns. The chart refuses an 
 | `CHAMVI_SCHEDULER` | `false` | `cronJobs` is not empty |
 | `CHAMVI_SANDBOX_NAMESPACE` | `sandbox.namespace` | `sandbox.enabled` |
 | `CHAMVI_PUBLIC_URL` | `https://<ingress.host>` with `tls.secretName`, else `http://<ingress.host>` | `ingress.enabled` and no `env.CHAMVI_PUBLIC_URL` (yours wins) |
+| `CHAMVI_DEPLOYMENT` | the release's full name (`<release>-agent-app`, or `fullnameOverride`) | `sandbox.enabled` and no `env.CHAMVI_DEPLOYMENT` (yours wins) |
 
 The app listens on `HOST` `0.0.0.0` (IPv4 only). On an IPv6-only cluster (EKS IPv6 mode) set `env.HOST: "::"`, which
 listens dual-stack where the node kernel has IPv6; the chart refuses any other `HOST`, since the kubelet probes the pod
@@ -174,10 +175,12 @@ the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or `sandboxModule({ provider:
 
 - Sandbox env for `env`: `CHAMVI_SANDBOX_IMAGE` (default `ghcr.io/chamvi/sandbox-dev:trixie`; `sandbox-node` is
   deprecated, pin a digest in production), `CHAMVI_SANDBOX_IMAGES` (the images the model may pick, a comma list),
-  `CHAMVI_GIT_CREDENTIAL_MODE` and `CHAMVI_DEPLOYMENT`. Give each release sharing a sandbox namespace its own
-  `CHAMVI_DEPLOYMENT` (a label value, e.g. the release name): workspaces of other deployments stay untouched, and only
-  a named deployment removes workspaces of runs its store no longer knows (under `default` they wait for their 7 day
-  lifetime). Changing it later leaves the existing workspaces to expire. `CHAMVI_GIT_TOKENS` belongs in a Secret.
+  `CHAMVI_GIT_CREDENTIAL_MODE`. `CHAMVI_GIT_TOKENS` belongs in a Secret.
+- The chart sets `CHAMVI_DEPLOYMENT` (the workspaces' `chamvi.dev/deployment` label) to the release's full name, so
+  releases sharing a sandbox namespace never see each other's workspaces, and the app removes workspaces of runs its
+  store no longer knows (under chamvi's `default` they wait for their 7 day lifetime). Workspaces created under another
+  value (`default`, before the chart set it) are no longer found by the app: a waiting run gets a fresh workspace, and the old
+  pods stop at their deadline. Set `env.CHAMVI_DEPLOYMENT` to keep a value, e.g. `default` across this upgrade.
 - Create the namespace first, apart from the release namespace (the chart refuses the same one), and label it for
   Pod Security `baseline`: since chamvi 027 workspace pods run as root with a writable root filesystem and a few added
   capabilities, so `apt` and toolchain installs work. The provider's `user` and `readOnlyRoot` options restore a pod
@@ -188,7 +191,8 @@ the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or `sandboxModule({ provider:
 - The egress policy selects pods labelled `app.kubernetes.io/managed-by: chamvi` and `app.kubernetes.io/component: sandbox`
   (the app pod is `component: app`). The portable `NetworkPolicy` denies all ingress and allows DNS to the pods of
   `networkPolicy.dns` (kube-dns by default, selected by any labels; NodeLocal DNSCache runs on the host network, so add
-  its address to `networkPolicy.dns.ipBlocks`, e.g. `169.254.20.10/32`) plus TCP 443 to every address outside
+  its address to `networkPolicy.dns.ipBlocks`, e.g. `169.254.20.10/32`) plus the TCP `networkPolicy.ports` (443 and
+  80 by default) to every address outside
   `networkPolicy.clusterCIDRs` and `169.254.169.254/32` (IPv6: outside `networkPolicy.clusterCIDRsIPv6`, default
   `fc00::/7`, `fe80::/10`). Both lists must hold at least one range.
 - Limits of the portable policy: it needs an enforcing CNI, cannot name hosts, and how `ipBlock` treats pod and service
@@ -198,11 +202,12 @@ the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or `sandboxModule({ provider:
   pod or node addresses (EKS IPv6 mode, GKE external IPv6), add those ranges to `clusterCIDRsIPv6` too.
 - `networkPolicy.cilium.enabled` renders a `CiliumNetworkPolicy` **instead of** the portable policy (policies are
   allow-lists whose union applies, so both together would void the FQDN list): deny-all ingress, the DNS proxy rule
-  and TCP 443 to `cilium.fqdns` only. The render fails when the cluster serves no `cilium.io/v2` API.
-- Both policies allow TCP 443 only. Debian's default apt sources, which `sandbox-dev` keeps, are plain HTTP (port 80),
-  so `apt-get` fails behind either policy; with Cilium so does every download from a host missing in `cilium.fqdns`
-  (mise and its toolchains, e.g. `mise.jdx.dev`, `objects.githubusercontent.com`, `nodejs.org`). Add what your
-  workspaces install from, or use an image that ships the toolchain.
+  and the TCP `networkPolicy.ports` to `cilium.fqdns` only. The render fails when the cluster serves no `cilium.io/v2`
+  API.
+- Port 80 is there for Debian's default apt sources, which `sandbox-dev` keeps: they are plain HTTP (apt checks the
+  package signatures). The default `cilium.fqdns` cover GitHub (also its release downloads), npm, `deb.debian.org` and
+  mise (`mise.jdx.dev`, `mise-versions.jdx.dev`, `nodejs.org` for node); add the other registries and toolchain hosts
+  your workspaces install from. `networkPolicy.ports: [443]` drops plain HTTP.
 
 ## Monitoring and tests
 
@@ -270,20 +275,21 @@ Kubernetes: `>=1.30.0-0`
 | probes.startup.timeoutSeconds | int | `2` | Startup request timeout in seconds. |
 | replicas | int | `1` | Application replicas; more than one requires a shared database. |
 | resources | object | `{}` | Application resource requests and limits. |
-| sandbox | object | `{"enabled":false,"namespace":"","networkPolicy":{"cilium":{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org"]},"clusterCIDRs":["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"],"clusterCIDRsIPv6":["fc00::/7","fe80::/10"],"dns":{"ipBlocks":[],"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}},"enabled":true}}` | Kubernetes sandbox pods (the chamvi sandbox-k8s provider): a Role and RoleBinding in `sandbox.namespace`, the egress policy, and `CHAMVI_SANDBOX_NAMESPACE` on the app. |
+| sandbox | object | `{"enabled":false,"namespace":"","networkPolicy":{"cilium":{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org","deb.debian.org","mise.jdx.dev","mise-versions.jdx.dev","nodejs.org"]},"clusterCIDRs":["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"],"clusterCIDRsIPv6":["fc00::/7","fe80::/10"],"dns":{"ipBlocks":[],"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}},"enabled":true,"ports":[443,80]}}` | Kubernetes sandbox pods (the chamvi sandbox-k8s provider): a Role and RoleBinding in `sandbox.namespace`, the egress policy, and `CHAMVI_SANDBOX_NAMESPACE` on the app. |
 | sandbox.enabled | bool | `false` | Grant the app's ServiceAccount the sandbox Role and mount its token. Select the provider in the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or the module option). |
 | sandbox.namespace | string | `""` | Namespace of the sandbox pods; must exist and differ from the release namespace. |
-| sandbox.networkPolicy | object | `{"cilium":{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org"]},"clusterCIDRs":["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"],"clusterCIDRsIPv6":["fc00::/7","fe80::/10"],"dns":{"ipBlocks":[],"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}},"enabled":true}` | Sandbox egress controls. |
-| sandbox.networkPolicy.cilium | object | `{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org"]}` | Optional Cilium replacement policy. |
+| sandbox.networkPolicy | object | `{"cilium":{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org","deb.debian.org","mise.jdx.dev","mise-versions.jdx.dev","nodejs.org"]},"clusterCIDRs":["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"],"clusterCIDRsIPv6":["fc00::/7","fe80::/10"],"dns":{"ipBlocks":[],"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}},"enabled":true,"ports":[443,80]}` | Sandbox egress controls. |
+| sandbox.networkPolicy.cilium | object | `{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org","deb.debian.org","mise.jdx.dev","mise-versions.jdx.dev","nodejs.org"]}` | Optional Cilium replacement policy. |
 | sandbox.networkPolicy.cilium.enabled | bool | `false` | Use FQDN policy instead of the portable NetworkPolicy. |
-| sandbox.networkPolicy.cilium.fqdns | list | `["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org"]` | Allowed HTTPS DNS names and patterns. |
-| sandbox.networkPolicy.clusterCIDRs | list | `["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"]` | IPv4 cluster CIDRs (pod, service and node ranges) excluded from portable public HTTPS egress; at least one. |
-| sandbox.networkPolicy.clusterCIDRsIPv6 | list | `["fc00::/7","fe80::/10"]` | IPv6 cluster CIDRs excluded from portable public HTTPS egress; add globally routable pod, service and node ranges (EKS IPv6, dual-stack); at least one. |
+| sandbox.networkPolicy.cilium.fqdns | list | `["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org","deb.debian.org","mise.jdx.dev","mise-versions.jdx.dev","nodejs.org"]` | Allowed DNS names and patterns (on `networkPolicy.ports`): GitHub, npm, Debian's apt sources and mise with its default node downloads. |
+| sandbox.networkPolicy.clusterCIDRs | list | `["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"]` | IPv4 cluster CIDRs (pod, service and node ranges) excluded from portable public egress; at least one. |
+| sandbox.networkPolicy.clusterCIDRsIPv6 | list | `["fc00::/7","fe80::/10"]` | IPv6 cluster CIDRs excluded from portable public egress; add globally routable pod, service and node ranges (EKS IPv6, dual-stack); at least one. |
 | sandbox.networkPolicy.dns | object | `{"ipBlocks":[],"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}}` | Selectors of DNS pods reachable by sandboxes. |
 | sandbox.networkPolicy.dns.ipBlocks | list | `[]` | Extra DNS server CIDRs for the portable policy, e.g. NodeLocal DNSCache's `169.254.20.10/32` (a hostNetwork DaemonSet no pod selector matches). |
 | sandbox.networkPolicy.dns.namespaceSelector | object | `{"kubernetes.io/metadata.name":"kube-system"}` | DNS namespace labels. |
 | sandbox.networkPolicy.dns.podSelector | object | `{"k8s-app":"kube-dns"}` | DNS pod labels. |
 | sandbox.networkPolicy.enabled | bool | `true` | Create sandbox policy resources when sandbox is enabled. |
+| sandbox.networkPolicy.ports | list | `[443,80]` | TCP ports sandboxes may reach on public addresses (portable policy) or on `cilium.fqdns` (Cilium). 80 is for Debian's apt sources, which are plain HTTP (apt checks signatures). |
 | secrets | list | `[]` | Existing Secret names, each mounted through envFrom on every pod (DATABASE_URL, CHAMVI_TOKENS, provider API keys, GITHUB_*); this chart creates no Secret. |
 | service | object | `{"annotations":{},"port":80,"type":"ClusterIP"}` | Application Service settings. |
 | service.annotations | object | `{}` | Service annotations. |

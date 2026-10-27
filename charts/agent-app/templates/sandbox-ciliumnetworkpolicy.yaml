@@ -29,5 +29,8 @@ spec:
         - {{ ternary "matchPattern" "matchName" (contains "*" .) }}: {{ . | quote }}
         {{- end }}
       toPorts:
-        - ports: [{port: '443', protocol: TCP}]
+        - ports:
+            {{- range $np.ports }}
+            - {port: {{ toString . | quote }}, protocol: TCP}
+            {{- end }}
 {{- end }}

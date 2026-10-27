@@ -459,7 +459,7 @@
                   "type": "boolean"
                 },
                 "fqdns": {
-                  "description": "Allowed HTTPS DNS names and patterns.",
+                  "description": "Allowed DNS names and patterns (on `networkPolicy.ports`): GitHub, npm, Debian's apt sources and mise with its default node downloads.",
                   "items": {
                     "required": [],
                     "type": "string"
@@ -476,7 +476,7 @@
               "type": "object"
             },
             "clusterCIDRs": {
-              "description": "IPv4 cluster CIDRs (pod, service and node ranges) excluded from portable public HTTPS egress; at least one.",
+              "description": "IPv4 cluster CIDRs (pod, service and node ranges) excluded from portable public egress; at least one.",
               "items": {
                 "required": [],
                 "type": "string"
@@ -486,7 +486,7 @@
               "type": "array"
             },
             "clusterCIDRsIPv6": {
-              "description": "IPv6 cluster CIDRs excluded from portable public HTTPS egress; add globally routable pod, service and node ranges (EKS IPv6, dual-stack); at least one.",
+              "description": "IPv6 cluster CIDRs excluded from portable public egress; add globally routable pod, service and node ranges (EKS IPv6, dual-stack); at least one.",
               "items": {
                 "required": [],
                 "type": "string"
@@ -552,6 +552,19 @@
               "required": [],
               "title": "enabled",
               "type": "boolean"
+            },
+            "ports": {
+              "description": "TCP ports sandboxes may reach on public addresses (portable policy) or on `cilium.fqdns` (Cilium). 80 is for Debian's apt sources, which are plain HTTP (apt checks signatures).",
+              "items": {
+                "maximum": 65535,
+                "minimum": 1,
+                "required": [],
+                "type": "integer"
+              },
+              "minItems": 1,
+              "required": [],
+              "title": "ports",
+              "type": "array"
             }
           },
           "required": [

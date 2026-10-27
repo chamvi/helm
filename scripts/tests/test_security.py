@@ -23,7 +23,7 @@ class SecurityContract(unittest.TestCase):
         self.assertEqual(binding["roleRef"], {"apiGroup": "rbac.authorization.k8s.io", "kind": "Role", "name": role["metadata"]["name"]})
         self.assertFalse(any(d["kind"] in ["ClusterRole", "Namespace"] for d in docs))
 
-    def test_portable_policy_is_deny_ingress_and_public_https_only(self):
+    def test_portable_policy_is_deny_ingress_and_public_web_only(self):
         policy = next(d for d in documents(render({"sandbox": SANDBOX})) if d["kind"] == "NetworkPolicy")
         spec = policy["spec"]
         self.assertEqual(spec["podSelector"]["matchLabels"], LABELS)
@@ -34,7 +34,7 @@ class SecurityContract(unittest.TestCase):
             "ports": [{"protocol": "UDP", "port": 53}, {"protocol": "TCP", "port": 53}],
         })
         https = spec["egress"][1]
-        self.assertEqual(https["ports"], [{"protocol": "TCP", "port": 443}])
+        self.assertEqual(https["ports"], [{"protocol": "TCP", "port": 443}, {"protocol": "TCP", "port": 80}])
         self.assertEqual(len(spec["egress"]), 2)
         for peer in https["to"]:
             block = peer["ipBlock"]

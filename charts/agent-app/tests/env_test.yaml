@@ -53,3 +53,21 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content: { name: FLAG, value: "true" }
+  - it: names the sandbox deployment after the release
+    template: templates/deployment.yaml
+    set:
+      sandbox: {enabled: true, namespace: sandboxes}
+    asserts:
+      - contains: {path: 'spec.template.spec.containers[0].env', content: {name: CHAMVI_DEPLOYMENT, value: demo-agent-app}}
+  - it: keeps an explicit CHAMVI_DEPLOYMENT once
+    template: templates/deployment.yaml
+    set:
+      sandbox: {enabled: true, namespace: sandboxes}
+      env: {CHAMVI_DEPLOYMENT: shared}
+    asserts:
+      - contains: {path: 'spec.template.spec.containers[0].env', content: {name: CHAMVI_DEPLOYMENT, value: shared}}
+      - notContains: {path: 'spec.template.spec.containers[0].env', content: {name: CHAMVI_DEPLOYMENT, value: demo-agent-app}}
+  - it: sets no CHAMVI_DEPLOYMENT without the sandbox
+    template: templates/deployment.yaml
+    asserts:
+      - notContains: {path: 'spec.template.spec.containers[0].env', content: {name: CHAMVI_DEPLOYMENT, value: demo-agent-app}}

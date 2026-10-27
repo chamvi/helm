@@ -105,8 +105,13 @@ app.kubernetes.io/managed-by: {{ .context.Release.Service | quote }}
 - name: CHAMVI_PUBLIC_URL
   value: {{ include "agent-app.publicUrl" . | quote }}
 {{- end }}
+{{- $deriveDeployment := and .Values.sandbox.enabled (or (not (hasKey .Values.env "CHAMVI_DEPLOYMENT")) (eq (toString .Values.env.CHAMVI_DEPLOYMENT) "")) }}
+{{- if $deriveDeployment }}
+- name: CHAMVI_DEPLOYMENT
+  value: {{ include "agent-app.fullname" . | quote }}
+{{- end }}
 {{- range $key, $value := .Values.env }}
-{{- if not (and $derivePublicUrl (eq $key "CHAMVI_PUBLIC_URL")) }}
+{{- if not (or (and $derivePublicUrl (eq $key "CHAMVI_PUBLIC_URL")) (and $deriveDeployment (eq $key "CHAMVI_DEPLOYMENT"))) }}
 - name: {{ $key | quote }}
   value: {{ include "agent-app.scalar" $value | quote }}
 {{- end }}
