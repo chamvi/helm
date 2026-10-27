@@ -11,7 +11,12 @@ icon: https://raw.githubusercontent.com/chamvi/chamvi/master/.github/assets/logo
 sources:
   - https://github.com/chamvi/helm
   - https://github.com/chamvi/chamvi
-keywords: [ chamvi, agents, ai, llm, automation ]
+keywords:
+  - chamvi
+  - agents
+  - ai
+  - llm
+  - automation
 maintainers:
   - name: tada5hi
     email: contact@tada5hi.net
