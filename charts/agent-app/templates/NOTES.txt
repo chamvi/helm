@@ -22,7 +22,7 @@ envFrom Secret is invisible to Helm. Keep preStop plus the effective force-exit
 timeout strictly below terminationGracePeriodSeconds.
 {{- if .Values.sandbox.enabled }}
 Sandbox pods run in namespace {{ .Values.sandbox.namespace }} (create it first and
-label it for Pod Security restricted). The chart grants the app's ServiceAccount
+label it for Pod Security baseline; workspace pods run as root). The chart grants the app's ServiceAccount
 pods create/get/list/delete and pods/exec get/create there. Select the Kubernetes
 provider in the app: env.CHAMVI_SANDBOX_PROVIDER=kubernetes or sandboxModule({ provider: 'kubernetes' }).
 {{- if .Values.sandbox.networkPolicy.enabled }}
