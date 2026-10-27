@@ -1,6 +1,6 @@
 # chamvi monorepo correspondence
 
-Source: `chamvi/chamvi` master at `fbb1d11` (2026-10-25, release 0.2.1), packages published on npm at 0.2.1. Verify
+Source: `chamvi/chamvi` master at `a9181d6` (2026-10-27, release 0.3.0), packages published on npm at 0.3.0. Verify
 against the source, never against the 011 plans, whose quoted contract predates the channels rewrite.
 
 | chamvi | Path in the monorepo | Chart counterpart |
@@ -9,6 +9,7 @@ against the source, never against the 011 plans, whose quoted contract predates 
 | `approvalUrlOf()`: `<CHAMVI_PUBLIC_URL><basePath>/ui/approvals?run=&approval=` | `packages/app/src/config/helpers.ts` | `agent-app.publicUrl` derives the origin only (no basePath) |
 | `CHAMVI_SCHEDULER=false` in start mode: a `cron` channel that validates but never fires | `packages/app/src/modules/scheduler/module.ts` | set on every pod whenever `cronJobs` is non-empty |
 | `chamvi run-job <agent> [subscriptionId]` | `packages/cli/src/commands/run-job.ts` | CronJob args `command + [run-job, agent, subscription?]` |
+| A job never reloads a folder agent: another stored revision while the agent has unsettled runs is exit 1 (`invalid_run_state`) | `packages/app/src/modules/agents/` (watcher role `job`) | documented under CronJob mode in the chart README |
 | cron subscription id `cron:<expression>`, idempotency key `<subscriptionId>@<scheduledAt ISO>` | `packages/channel-cron/src/subscription/module.ts`, `packages/channel-cron/src/tick/module.ts` | `backoffLimit: 0`, `restartPolicy: Never`, `Forbid` |
 | `CHAMVI_FORCE_EXIT_MS` 90 000 (dev 15 000) | `packages/cli/src/commands/constants.ts` | the shutdown guard's default |
 | drain 30 s, close 5 s, readiness delay 0 | `packages/app/src/config/constants.ts` | grace 120 s, preStop 5 s |
@@ -16,7 +17,7 @@ against the source, never against the 011 plans, whose quoted contract predates 
 | GitHub deliveries at `<basePath>/channels/github`, webhooks at `<basePath>/channels/webhook/<agent><path>` | `packages/http/src/channels/`, `packages/github/src/webhook/` | README only (one Service port serves all) |
 | `SANDBOX_LABELS` `app.kubernetes.io/managed-by: chamvi`, `app.kubernetes.io/component: sandbox` | `packages/sandbox/src/provider/constants.ts` | policy selectors; app pods are `component: app` |
 | pods create/get/list/delete, pods/exec get/create (websocket exec) | `packages/sandbox-k8s/src/client/helpers.ts` | the sandbox Role |
-| `CHAMVI_SANDBOX_PROVIDER` (`local`/`docker`/`kubernetes`), `CHAMVI_SANDBOX_NAMESPACE` required for kubernetes, `CHAMVI_SANDBOX_IMAGE` | `packages/sandbox/src/module/module.ts` | the chart sets the namespace only; the provider is the app's choice (`env`) |
+| `CHAMVI_SANDBOX_PROVIDER` (`local`/`docker`/`kubernetes`), `CHAMVI_SANDBOX_NAMESPACE` required for kubernetes, `CHAMVI_SANDBOX_IMAGE` (default `ghcr.io/chamvi/sandbox-dev:trixie`), `CHAMVI_SANDBOX_IMAGES`, `CHAMVI_DEPLOYMENT` (label `chamvi.dev/deployment`, default `default`), `CHAMVI_GIT_TOKENS`, `CHAMVI_GIT_CREDENTIAL_MODE` | `packages/sandbox/src/module/module.ts` | the chart sets the namespace only; the provider is the app's choice (`env`) |
 | `CHAMVI_AGENTS_DIR` (default `./agents` when a directory), entry-less app `createApp({})` | `packages/app/src/modules/agents/`, `packages/cli/src/entry/` | none: agents ship in the image (`/app`) |
 | provider keys `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY`, `XAI_API_KEY` for `'<provider>/<model>'` strings | `packages/app/src/models/constants.ts` | README Secrets table |
 | `GITHUB_APP_*`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_INSTALLATION_ID`, `GITHUB_API_URL` | `packages/github/src/module/` | README Secrets table |

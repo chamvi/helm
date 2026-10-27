@@ -92,12 +92,14 @@ The CLI loads `dist/index.mjs`, or, without an entry, builds the default app fro
 |---|---|
 | `DATABASE_URL` | a shared PostgreSQL store: more than one replica, any `cronJobs`, runs that survive a restart |
 | `CHAMVI_TOKENS` | static API tokens (`[{"value", "id", "permissions"}]`), unless another authenticator is configured |
-| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY`, `XAI_API_KEY` | an agent's `'<provider>/<model>'` model string names that provider |
+| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY`, `XAI_API_KEY` | an agent's `'<provider>/<model>'` model string (or the default `CHAMVI_MODEL`) names that implicit provider |
+| `CHAMVI_PROVIDER_<NAME>_API_KEY` | a provider declared by name (with `CHAMVI_PROVIDER_<NAME>_TYPE` and `_BASE_URL` in `env`); it replaces the implicit provider of the same name |
+| `CHAMVI_GIT_TOKENS` | git tokens for sandbox checkouts and pushes (`[{"host", "path"?, "username"?, "token"}]`) |
 | `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` | `githubModule()` |
 | `OPENCLAW_HOOKS_TOKEN` (with `OPENCLAW_BASE_URL`, `OPENCLAW_CHANNEL`, `OPENCLAW_TO`) | `openclawModule()` |
 | `AUTHUP_CLIENT_SECRET` (with `AUTHUP_URL`, `AUTHUP_CLIENT_ID`) | `authupModule()` |
 
-`env` holds plain, non-secret values (`CHAMVI_LOG_LEVEL`, `CHAMVI_MAX_CONCURRENT_RUNS`, `CHAMVI_SANDBOX_PROVIDER`, ...),
+`env` holds plain, non-secret values (`CHAMVI_LOG_LEVEL`, `CHAMVI_MAX_CONCURRENT_RUNS`, `CHAMVI_MODEL`, `CHAMVI_SANDBOX_PROVIDER`, ...),
 rendered in name order after the variables the chart owns. The chart refuses an `env` entry that names one of its own:
 
 | Variable | Value | When |
@@ -158,12 +160,24 @@ CronJobs use `concurrencyPolicy: Forbid`, `restartPolicy: Never` and `backoffLim
 new time, get a new `<subscription>@<time>` idempotency key and start a duplicate run. `cronJob.resources` overrides the
 Deployment's `resources` (empty inherits them).
 
+Since chamvi 0.3.0 a Job never reloads an agent folder. When the folder changed and the store still has unsettled
+runs of that agent at the older revision, the Job does not register the agent and exits 1 (`invalid_run_state`),
+leaving the runs alone; the Deployment applies the change, after which the Jobs run again. Roll the Deployment before
+the CronJobs pick up a changed folder; a CronJob-only install with unsettled runs never applies one. Code agents are
+not affected.
+
 ## Sandbox pods
 
 With `sandbox.enabled` the app may run `@chamvi/sandbox-k8s` workspaces in `sandbox.namespace`. Select the provider in
 the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or `sandboxModule({ provider: 'kubernetes' })`); the chart sets
 `CHAMVI_SANDBOX_NAMESPACE`.
 
+- Sandbox env for `env`: `CHAMVI_SANDBOX_IMAGE` (default `ghcr.io/chamvi/sandbox-dev:trixie`; `sandbox-node` is
+  deprecated, pin a digest in production), `CHAMVI_SANDBOX_IMAGES` (the images the model may pick, a comma list),
+  `CHAMVI_GIT_CREDENTIAL_MODE` and `CHAMVI_DEPLOYMENT`. Give each release sharing a sandbox namespace its own
+  `CHAMVI_DEPLOYMENT` (a label value, e.g. the release name): workspaces of other deployments stay untouched, and only
+  a named deployment removes workspaces of runs its store no longer knows (under `default` they wait for their 7 day
+  lifetime). Changing it later leaves the existing workspaces to expire. `CHAMVI_GIT_TOKENS` belongs in a Secret.
 - Create the namespace first, apart from the release namespace (the chart refuses the same one), and label it for
   Pod Security `baseline`: since chamvi 027 workspace pods run as root with a writable root filesystem and a few added
   capabilities, so `apt` and toolchain installs work. The provider's `user` and `readOnlyRoot` options restore a pod
@@ -185,6 +199,10 @@ the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or `sandboxModule({ provider:
 - `networkPolicy.cilium.enabled` renders a `CiliumNetworkPolicy` **instead of** the portable policy (policies are
   allow-lists whose union applies, so both together would void the FQDN list): deny-all ingress, the DNS proxy rule
   and TCP 443 to `cilium.fqdns` only. The render fails when the cluster serves no `cilium.io/v2` API.
+- Both policies allow TCP 443 only. Debian's default apt sources, which `sandbox-dev` keeps, are plain HTTP (port 80),
+  so `apt-get` fails behind either policy; with Cilium so does every download from a host missing in `cilium.fqdns`
+  (mise and its toolchains, e.g. `mise.jdx.dev`, `objects.githubusercontent.com`, `nodejs.org`). Add what your
+  workspaces install from, or use an image that ships the toolchain.
 
 ## Monitoring and tests
 
