@@ -4,7 +4,7 @@ description: Deploys a chamvi agent app (one image running `chamvi start`), with
   optional run-job CronJobs and the RBAC and egress policy for Kubernetes
   sandbox pods.
 type: application
-version: 0.1.1
+version: 0.1.2
 kubeVersion: ">=1.30.0-0"
 home: https://chamvi.dev
 icon: https://raw.githubusercontent.com/chamvi/chamvi/master/.github/assets/logo.svg

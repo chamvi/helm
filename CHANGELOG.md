@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/chamvi/helm/compare/root-0.1.1...root-0.1.2) (2026-10-27)
+
+
+### Features
+
+* **agent-app:** name the sandbox deployment after the release and allow apt and mise egress ([b9372c8](https://github.com/chamvi/helm/commit/b9372c85b6e9ab74203f7e67aa954a695120a6d6))
+
 ## [0.1.1](https://github.com/chamvi/helm/compare/root-0.1.0...root-0.1.1) (2026-10-25)
 
 
