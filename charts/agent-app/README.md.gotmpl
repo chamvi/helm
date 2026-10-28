@@ -11,6 +11,27 @@ One image, one Deployment: the chart runs a [chamvi](https://github.com/chamvi/c
 (or an entry-less app loading `agents/` folders) behind a Service, with an optional Ingress, optional run-job CronJobs,
 the RBAC and egress policy for Kubernetes sandbox pods, and an optional ServiceMonitor.
 
+## Model settings
+
+With chamvi 0.3.1 or newer, agents without their own model inherit the app-wide default. Named providers allow separate keys and endpoints:
+
+```yaml
+model: team-a/claude-sonnet-5-5
+providers:
+    team-a:
+        type: anthropic
+        apiKey: { secretName: model-credentials, key: api-key }
+        headers:
+            x-team: { value: platform }
+            authorization:
+                valueFrom:
+                    secretKeyRef: { name: model-credentials, key: authorization }
+```
+
+API keys and credential headers are Secret references only. Provider keys may also come from `secrets` (envFrom), so a provider need not declare `apiKey`. An `openai-compatible` provider requires `baseURL` and its SDK provider package in the application image. `model` renders `CHAMVI_MODEL`; provider names and header names map to upper-case env segments with hyphens replaced by underscores. Explicit chart-generated names cannot also appear in `env`.
+
+No config-file volume or remote-agent configuration is created. Use the existing generic env and Secret mechanisms for advanced app settings. The readiness test hook receives none of these model credentials.
+
 ## Install
 
 <!-- x-release-please-start-version -->

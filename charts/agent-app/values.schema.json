@@ -276,6 +276,13 @@
       "title": "ingress",
       "type": "object"
     },
+    "model": {
+      "default": "",
+      "description": "App-wide default model, provider/model-id. Empty keeps the app's code default.",
+      "required": [],
+      "title": "model",
+      "type": "string"
+    },
     "nameOverride": {
       "default": "",
       "description": "Override the chart name (DNS label, at most 63 characters).",
@@ -407,6 +414,115 @@
       },
       "required": [],
       "title": "probes",
+      "type": "object"
+    },
+    "providers": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "apiKey": {
+            "additionalProperties": false,
+            "properties": {
+              "key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "secretName": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "secretName",
+              "key"
+            ],
+            "type": "object"
+          },
+          "baseURL": {
+            "type": "string"
+          },
+          "headers": {
+            "additionalProperties": {
+              "additionalProperties": false,
+              "oneOf": [
+                {
+                  "not": {
+                    "required": [
+                      "valueFrom"
+                    ]
+                  },
+                  "required": [
+                    "value"
+                  ]
+                },
+                {
+                  "not": {
+                    "required": [
+                      "value"
+                    ]
+                  },
+                  "required": [
+                    "valueFrom"
+                  ]
+                }
+              ],
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "valueFrom": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "secretKeyRef": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "key": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "name": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "key"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "secretKeyRef"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "type": "object"
+          },
+          "type": {
+            "enum": [
+              "anthropic",
+              "openai",
+              "openai-compatible",
+              "google",
+              "mistral",
+              "xai",
+              "gateway"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "type": "object"
+      },
+      "description": "Named model providers. API keys use {secretName, key}; headers use {value} or {valueFrom: {secretKeyRef: {name, key}}}.",
+      "required": [],
+      "title": "providers",
       "type": "object"
     },
     "replicas": {
@@ -763,6 +879,7 @@
     }
   },
   "required": [
+    "model",
     "nameOverride",
     "fullnameOverride",
     "image",
