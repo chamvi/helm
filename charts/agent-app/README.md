@@ -9,6 +9,27 @@ One image, one Deployment: the chart runs a [chamvi](https://github.com/chamvi/c
 (or an entry-less app loading `agents/` folders) behind a Service, with an optional Ingress, optional run-job CronJobs,
 the RBAC and egress policy for Kubernetes sandbox pods, and an optional ServiceMonitor.
 
+## Model settings
+
+With chamvi 0.3.1 or newer, agents without their own model inherit the app-wide default. Named providers allow separate keys and endpoints:
+
+```yaml
+model: team-a/claude-sonnet-5-5
+providers:
+    team-a:
+        type: anthropic
+        apiKey: { secretName: model-credentials, key: api-key }
+        headers:
+            x-team: { value: platform }
+            authorization:
+                valueFrom:
+                    secretKeyRef: { name: model-credentials, key: authorization }
+```
+
+API keys and credential headers are Secret references only. Provider keys may also come from `secrets` (envFrom), so a provider need not declare `apiKey`. An `openai-compatible` provider requires `baseURL` and its SDK provider package in the application image. `model` renders `CHAMVI_MODEL`; provider names and header names map to upper-case env segments with hyphens replaced by underscores. Explicit chart-generated names cannot also appear in `env`.
+
+No config-file volume or remote-agent configuration is created. Use the existing generic env and Secret mechanisms for advanced app settings. The readiness test hook receives none of these model credentials.
+
 ## Install
 
 <!-- x-release-please-start-version -->
@@ -255,6 +276,7 @@ Kubernetes: `>=1.30.0-0`
 | ingress.host | string | `""` | Concrete DNS host, required when ingress is enabled. |
 | ingress.tls | object | `{"secretName":""}` | TLS settings. |
 | ingress.tls.secretName | string | `""` | TLS Secret name; enables HTTPS origin derivation. |
+| model | string | `""` | App-wide default model, provider/model-id. Empty keeps the app's code default. |
 | nameOverride | string | `""` | Override the chart name (DNS label, at most 63 characters). |
 | nodeSelector | object | `{}` | Node selector for application and job pods. |
 | podAnnotations | object | `{}` | Annotations for application and job pods. |
@@ -273,6 +295,7 @@ Kubernetes: `>=1.30.0-0`
 | probes.startup.failureThreshold | int | `60` | Consecutive failures allowed during initialization. |
 | probes.startup.periodSeconds | int | `2` | Seconds between startup checks. |
 | probes.startup.timeoutSeconds | int | `2` | Startup request timeout in seconds. |
+| providers | object | `{}` | Named model providers. API keys use {secretName, key}; headers use {value} or {valueFrom: {secretKeyRef: {name, key}}}. |
 | replicas | int | `1` | Application replicas; more than one requires a shared database. |
 | resources | object | `{}` | Application resource requests and limits. |
 | sandbox | object | `{"enabled":false,"namespace":"","networkPolicy":{"cilium":{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org","deb.debian.org","mise.jdx.dev","mise-versions.jdx.dev","nodejs.org"]},"clusterCIDRs":["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"],"clusterCIDRsIPv6":["fc00::/7","fe80::/10"],"dns":{"ipBlocks":[],"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}},"enabled":true,"ports":[443,80]}}` | Kubernetes sandbox pods (the chamvi sandbox-k8s provider): a Role and RoleBinding in `sandbox.namespace`, the egress policy, and `CHAMVI_SANDBOX_NAMESPACE` on the app. |

@@ -77,6 +77,14 @@ app.kubernetes.io/managed-by: {{ .context.Release.Service | quote }}
 
 {{- define "agent-app.ownedEnv" -}}
 {{- $names := list "PORT" "CHAMVI_BASE_PATH" -}}
+{{- if .Values.model -}}{{- $names = append $names "CHAMVI_MODEL" -}}{{- end -}}
+{{- range $name, $provider := .Values.providers -}}
+{{- $prefix := printf "CHAMVI_PROVIDER_%s_" ($name | upper | replace "-" "_") -}}
+{{- $names = append $names (printf "%sTYPE" $prefix) -}}
+{{- if $provider.baseURL -}}{{- $names = append $names (printf "%sBASE_URL" $prefix) -}}{{- end -}}
+{{- if $provider.apiKey -}}{{- $names = append $names (printf "%sAPI_KEY" $prefix) -}}{{- end -}}
+{{- range $header, $_ := $provider.headers -}}{{- $names = append $names (printf "%sHEADER_%s" $prefix ($header | upper | replace "-" "_")) -}}{{- end -}}
+{{- end -}}
 {{- if .Values.cronJobs -}}{{- $names = append $names "CHAMVI_SCHEDULER" -}}{{- end -}}
 {{- if .Values.sandbox.enabled -}}{{- $names = append $names "CHAMVI_SANDBOX_NAMESPACE" -}}{{- end -}}
 {{- toJson $names -}}
@@ -88,6 +96,34 @@ app.kubernetes.io/managed-by: {{ .context.Release.Service | quote }}
 {{- end -}}
 
 {{- define "agent-app.env" -}}
+{{- if .Values.model }}
+- name: CHAMVI_MODEL
+  value: {{ .Values.model | quote }}
+{{- end }}
+{{- range $name, $provider := .Values.providers }}
+{{- $prefix := printf "CHAMVI_PROVIDER_%s_" ($name | upper | replace "-" "_") }}
+- name: {{ printf "%sTYPE" $prefix }}
+  value: {{ $provider.type | quote }}
+{{- if $provider.baseURL }}
+- name: {{ printf "%sBASE_URL" $prefix }}
+  value: {{ $provider.baseURL | quote }}
+{{- end }}
+{{- if $provider.apiKey }}
+- name: {{ printf "%sAPI_KEY" $prefix }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ $provider.apiKey.secretName | quote }}
+      key: {{ $provider.apiKey.key | quote }}
+{{- end }}
+{{- range $header, $setting := $provider.headers }}
+- name: {{ printf "%sHEADER_%s" $prefix ($header | upper | replace "-" "_") }}
+{{- if hasKey $setting "value" }}
+  value: {{ $setting.value | quote }}
+{{- else }}
+  valueFrom: {{ $setting.valueFrom | toJson }}
+{{- end }}
+{{- end }}
+{{- end }}
 - name: PORT
   value: "3000"
 - name: CHAMVI_BASE_PATH

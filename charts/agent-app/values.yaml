@@ -7,6 +7,52 @@
 # -- Free-form umbrella chart values.
 global: {}
 
+# -- App-wide default model, provider/model-id. Empty keeps the app's code default.
+model: ''
+
+# @schema
+# type: object
+# additionalProperties:
+#   type: object
+#   additionalProperties: false
+#   required: [type]
+#   properties:
+#     type:
+#       type: string
+#       enum: [anthropic, openai, openai-compatible, google, mistral, xai, gateway]
+#     baseURL:
+#       type: string
+#     apiKey:
+#       type: object
+#       additionalProperties: false
+#       required: [secretName, key]
+#       properties:
+#         secretName: {type: string, minLength: 1}
+#         key: {type: string, minLength: 1}
+#     headers:
+#       type: object
+#       additionalProperties:
+#         type: object
+#         additionalProperties: false
+#         oneOf: [{required: [value], not: {required: [valueFrom]}}, {required: [valueFrom], not: {required: [value]}}]
+#         properties:
+#           value: {type: string}
+#           valueFrom:
+#             type: object
+#             additionalProperties: false
+#             required: [secretKeyRef]
+#             properties:
+#               secretKeyRef:
+#                 type: object
+#                 additionalProperties: false
+#                 required: [name, key]
+#                 properties:
+#                   name: {type: string, minLength: 1}
+#                   key: {type: string, minLength: 1}
+# @schema
+# -- Named model providers. API keys use {secretName, key}; headers use {value} or {valueFrom: {secretKeyRef: {name, key}}}.
+providers: {}
+
 # -- Override the chart name (DNS label, at most 63 characters).
 nameOverride: ''
 

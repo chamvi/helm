@@ -1,3 +1,4 @@
+{{- include "agent-app.validateModels" . -}}
 {{- $v := .Values -}}
 {{- range $path, $value := dict "sandbox.enabled" $v.sandbox.enabled "ingress.enabled" $v.ingress.enabled "serviceAccount.create" $v.serviceAccount.create "tests.enabled" $v.tests.enabled "serviceMonitor.enabled" $v.serviceMonitor.enabled -}}
 {{- if not (kindIs "bool" $value) -}}{{- fail (printf "agent-app: %s must be a boolean; use unquoted true or false." $path) -}}{{- end -}}
@@ -14,7 +15,7 @@
 {{- if not (has $v.strategy.type (list "Recreate" "RollingUpdate")) -}}{{- fail "agent-app: strategy.type must be Recreate or RollingUpdate." -}}{{- end -}}
 {{- if and (eq $v.strategy.type "Recreate") (hasKey $v.strategy "rollingUpdate") -}}{{- fail "agent-app: strategy.rollingUpdate requires strategy.type RollingUpdate; remove it for Recreate." -}}{{- end -}}
 {{- range $key, $_ := $v -}}
-{{- if not (has $key (list "global" "nameOverride" "fullnameOverride" "image" "imagePullSecrets" "replicas" "strategy" "command" "basePath" "env" "secrets" "terminationGracePeriodSeconds" "preStopSleepSeconds" "probes" "resources" "podAnnotations" "podLabels" "nodeSelector" "tolerations" "affinity" "serviceAccount" "service" "ingress" "cronJobs" "cronJob" "sandbox" "serviceMonitor" "tests")) -}}
+{{- if not (has $key (list "global" "model" "providers" "nameOverride" "fullnameOverride" "image" "imagePullSecrets" "replicas" "strategy" "command" "basePath" "env" "secrets" "terminationGracePeriodSeconds" "preStopSleepSeconds" "probes" "resources" "podAnnotations" "podLabels" "nodeSelector" "tolerations" "affinity" "serviceAccount" "service" "ingress" "cronJobs" "cronJob" "sandbox" "serviceMonitor" "tests")) -}}
 {{- fail (printf "agent-app: additional properties '%s' not allowed; check values.yaml." $key) -}}
 {{- end -}}
 {{- end -}}
