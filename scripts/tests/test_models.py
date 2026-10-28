@@ -41,6 +41,45 @@ class Models(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertNotIn("secret-sentinel", result.stderr)
 
+    def test_provider_header_env_collisions_are_rejected(self):
+        cases = [
+            ({"type": "anthropic"}, "b-type"),
+            ({"type": "anthropic", "baseURL": "https://models.example.test"}, "b-base-url"),
+            ({"type": "anthropic", "apiKey": {"secretName": "models", "key": "api-key"}}, "b-api-key"),
+            ({"type": "anthropic", "headers": {"c": {"value": "plain"}}}, "b-header-c"),
+        ]
+        for provider, header in cases:
+            with self.subTest(header=header):
+                result = self.render({"providers": {
+                    "a": {"type": "anthropic", "headers": {header: {
+                        "valueFrom": {"secretKeyRef": {"name": "models", "key": "secret-sentinel"}},
+                    }}},
+                    "a-header-b": provider,
+                }})
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertIn("duplicate environment variable names", result.stderr)
+                self.assertNotIn("secret-sentinel", result.stderr)
+
+    def test_unemitted_optional_provider_fields_do_not_collide_with_headers(self):
+        for header, env_name in [
+            ("b-base-url", "CHAMVI_PROVIDER_A_HEADER_B_BASE_URL"),
+            ("b-api-key", "CHAMVI_PROVIDER_A_HEADER_B_API_KEY"),
+        ]:
+            with self.subTest(header=header):
+                result = self.render({"providers": {
+                    "a": {"type": "anthropic", "headers": {header: {
+                        "valueFrom": {"secretKeyRef": {"name": "models", "key": "header"}},
+                    }}},
+                    "a-header-b": {"type": "anthropic"},
+                }})
+                self.assertEqual(result.returncode, 0, result.stderr)
+                deployment = next(doc for doc in yaml.safe_load_all(result.stdout) if doc and doc["kind"] == "Deployment")
+                env = deployment["spec"]["template"]["spec"]["containers"][0]["env"]
+                self.assertEqual([entry for entry in env if entry["name"] == env_name],
+                                 [{"name": env_name, "valueFrom": {
+                                     "secretKeyRef": {"name": "models", "key": "header"},
+                                 }}])
+
     def test_defaults_emit_no_model_settings(self):
         result = self.render({})
         self.assertEqual(result.returncode, 0, result.stderr)

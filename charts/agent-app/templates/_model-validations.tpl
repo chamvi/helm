@@ -41,4 +41,6 @@
 {{- end -}}
 {{- end -}}
 {{- end -}}
+{{- $names := include "agent-app.ownedEnv" . | fromJsonArray -}}
+{{- if ne (len $names) (len (uniq $names)) -}}{{- fail "agent-app: providers and header names must not generate duplicate environment variable names; rename a provider or header." -}}{{- end -}}
 {{- end -}}

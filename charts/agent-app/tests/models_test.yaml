@@ -1,6 +1,7 @@
 suite: model settings
 templates:
   - templates/deployment.yaml
+release: {name: demo, namespace: agents}
 values:
   - values/base.yaml
 tests:
@@ -11,20 +12,20 @@ tests:
         team-a:
           type: anthropic
           baseURL: https://models.example.test/api
-          apiKey: { secretName: model-credentials, key: api-key }
+          apiKey: {secretName: model-credentials, key: api-key}
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env
-          content: { name: CHAMVI_MODEL, value: team-a/model-id }
+          content: {name: CHAMVI_MODEL, value: team-a/model-id}
       - contains:
           path: spec.template.spec.containers[0].env
-          content: { name: CHAMVI_PROVIDER_TEAM_A_TYPE, value: anthropic }
+          content: {name: CHAMVI_PROVIDER_TEAM_A_TYPE, value: anthropic}
       - contains:
           path: spec.template.spec.containers[0].env
-          content: { name: CHAMVI_PROVIDER_TEAM_A_BASE_URL, value: 'https://models.example.test/api' }
+          content: {name: CHAMVI_PROVIDER_TEAM_A_BASE_URL, value: 'https://models.example.test/api'}
       - contains:
           path: spec.template.spec.containers[0].env
           content:
             name: CHAMVI_PROVIDER_TEAM_A_API_KEY
             valueFrom:
-              secretKeyRef: { name: model-credentials, key: api-key }
+              secretKeyRef: {name: model-credentials, key: api-key}
