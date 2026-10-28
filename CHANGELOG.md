@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/chamvi/helm/compare/root-0.1.2...root-0.1.3) (2026-10-28)
+
+
+### Features
+
+* **agent-app:** configure default models and named providers ([#8](https://github.com/chamvi/helm/issues/8)) ([482f7de](https://github.com/chamvi/helm/commit/482f7de3759e43d61a7faedeb00547e9b3fc5202))
+
 ## [0.1.2](https://github.com/chamvi/helm/compare/root-0.1.1...root-0.1.2) (2026-10-27)
 
 
