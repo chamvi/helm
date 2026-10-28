@@ -106,6 +106,15 @@ so tini stays PID 1: the Deployment runs `command + ["start"]`, each CronJob `co
 The CLI loads `dist/index.mjs`, or, without an entry, builds the default app from the `agents/` folder
 (`CHAMVI_AGENTS_DIR`, relative to `/app`); either way the agents ship inside the image.
 
+Apps using a chamvi release that exports `hashSkillBundle` and `loadSkillBundles` can configure approved local skills
+in agent code. Include the reviewed text/reference bundles in the agent image at the absolute paths pinned in that
+configuration, with read permissions for uid 1000. The Deployment and run-job CronJobs use the same image, so both
+receive the same bundle bytes. Review the content and commit its exact version and SHA-256 pin with the agent
+configuration; changing bytes under an old pin prevents the catalog from loading after restart. Bundle upgrades
+require reviewed bytes and a matching updated pin in a new app image. The chart adds no skill discovery or
+installation, filesystem mounts, environment variables or tool permissions. See
+[approved local skills](https://chamvi.dev/guide/skills) for the application setup when that release and guide ship.
+
 ## Secrets and env
 
 `secrets` names existing Secrets; each becomes an `envFrom` `secretRef` on the Deployment and the CronJobs

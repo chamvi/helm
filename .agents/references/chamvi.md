@@ -27,3 +27,13 @@ against the source, never against the 011 plans, whose quoted contract predates 
 Fixed: 0.2.0 double-converted string models in `installDefaultProvider`; chamvi PR #41 fixed it and 0.2.1 (published)
 ships the fix. The fixture app passes a model object, so it never depended on that fix; its `^0.2.0` range resolves to
 0.2.1.
+
+## Approved local skills compatibility check
+
+Checked plan 036 implementation at `19ab3e88abc867c8c1aaa6140e01b13d4d5a9ab4` (not yet released):
+`packages/app/src/skills/{bundle,module,tools,types}.ts` implements the opt-in `hashSkillBundle`/`loadSkillBundles`
+API for explicitly configured local passive bundles. The shared Deployment/CronJob image and uid 1000 read-only
+root in `charts/agent-app/templates/_helpers.tpl` remain compatible when reviewed bundles ship in the image.
+No new chart values, env names, routes or RBAC are required. Packaging and restart-pin behavior are documented in
+`charts/agent-app/README.md.gotmpl` and its generated `README.md`; the chart does not install or approve bundles.
+Adoption requires a chamvi release exporting both helpers.
