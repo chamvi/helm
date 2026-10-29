@@ -28,12 +28,20 @@ Fixed: 0.2.0 double-converted string models in `installDefaultProvider`; chamvi 
 ships the fix. The fixture app passes a model object, so it never depended on that fix; its `^0.2.0` range resolves to
 0.2.1.
 
-## Approved local skills compatibility check
+## First-class skills compatibility check (2026-10-29, unreleased)
 
-Checked plan 036 implementation at `19ab3e88abc867c8c1aaa6140e01b13d4d5a9ab4` (not yet released):
-`packages/app/src/skills/{bundle,module,tools,types}.ts` implements the opt-in `hashSkillBundle`/`loadSkillBundles`
-API for explicitly configured local passive bundles. The shared Deployment/CronJob image and uid 1000 read-only
-root in `charts/agent-app/templates/_helpers.tpl` remain compatible when reviewed bundles ship in the image.
-No new chart values, env names, routes or RBAC are required. Packaging and restart-pin behavior are documented in
-`charts/agent-app/README.md.gotmpl` and its generated `README.md`; the chart does not install or approve bundles.
-Adoption requires a chamvi release exporting both helpers.
+Checked monorepo `ffec9bdc` (`packages/core/src/skill/`, Engine preparation,
+`packages/skills/src/{source,bundle,prepare}/`, `packages/app/src/modules/{engine,agents}/`).
+`gitSkills` and all filesystem bundle helpers belong to the `@chamvi/skills` main entry; there is no skills `/module`
+or app compatibility export. Core owns generic startup coordination/scoped `load_skill`; app forwards defaults and
+agent extras. Globals/code sources prepare before `engineCreated`, folder extras later before serving. Check skips
+skill providers and migrate skips preparation. Pin mismatch prevents channels/HTTP/model work.
+
+`charts/agent-app/templates/_helpers.tpl` already supplies uid/gid 1000, a read-only root and writable `/tmp` to both
+Deployment and CronJobs. README source/generated docs explain distinct managed `/tmp` corpora, runtime skills
+package/Node >=22.20/Git (the current base image lacks Git), private source credentials/app egress, startup probes
+and clone-settlement shutdown. Existing `probes.startup` timing fields suffice. No new chart values, env variables,
+routes, mounts or RBAC. Sandbox policy selects only sandbox pods; source fetches originate in app/job pods.
+Ready `loadSkillBundle` snapshots remain compatible with explicit readable image assets. Review content and full
+commit pins independently; upgrades preserve saved results but pending/future loads use the new snapshot.
+This checks proposed integration, not a newly published package/chart contract.
