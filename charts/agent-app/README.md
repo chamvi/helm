@@ -115,7 +115,7 @@ startup installs and verifies required sources. Configure reviewed sources in ap
 import { createApp, defineAgent } from '@chamvi/app';
 import { gitSkills } from '@chamvi/skills';
 
-// These source/full-commit values and name/version/sha256 arrays are reviewed app configuration.
+// These source/full-commit values and name/version/hash arrays are reviewed app configuration.
 const common = gitSkills({
     source: reviewedSource,
     revision: reviewedFullCommit,
@@ -165,7 +165,7 @@ policies must allow DNS and the configured source/auth endpoints. Budget startup
 [probes](#probes-and-shutdown). Stop joins owned cleanup and can wait for a clone that ignores cancellation.
 
 Ready snapshots remain an alternative: copy approved passive bundles into the runtime image, readable by uid 1000,
-and pass `loadSkillBundle({ name, version, sha256, directory: '/app/approved-skills/audit' })` in `skills`.
+and pass `loadSkillBundle({ name, version, hash, directory: '/app/approved-skills/audit' })` in `skills`.
 The starter image copies JS/dependencies only, so add an explicit final-stage asset `COPY`. Manual
 `loadSkillBundles` catalogs remain supported with explicit instruction/tool composition. The chart does not approve
 content or grant tool permissions.
