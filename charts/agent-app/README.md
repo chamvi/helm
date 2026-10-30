@@ -138,6 +138,13 @@ const maintainer = defineAgent({
 export default createApp({ agents: [maintainer], skills: [common], model: configuredModel });
 ```
 
+Agent `instructions` remain compatible with strings and also accept ordered native system/user/assistant arrays.
+`AgentInstructions` and the native message/content types come from `@chamvi/core`, also re-exported by
+`@chamvi/app`. Leading system blocks use SDK instructions; examples and later system blocks remain ordered
+before the run transcript. Configured blocks stay out of checkpoints and are rebuilt after approval pauses.
+First-class skills append catalog metadata as a separate system block; manual `SkillCatalog.instructions` stays
+text for explicit composition. See the [typed instructions guide](https://chamvi.dev/guide/agents#instructions).
+
 App defaults apply to every code/folder agent; agent skills add extras. Direct `Engine({ skills })` accepts the same
 inputs. Chamvi appends metadata and supplies a scoped `load_skill` automatically. Computing a digest with
 `hashSkillBundle` is a review aid, never approval; pin both a full source commit and independently reviewed content.

@@ -51,3 +51,12 @@ This checks proposed integration, not a newly published package/chart contract.
 
 Runtime ownership rechecked against monorepo `de1f72e8` (2026-10-30). No chart template, values, schema, RBAC,
 probe, dependency or fixture changes are needed; this follow-up updates import/ownership guidance only.
+
+## Structured instructions follow-up (2026-10-30, unreleased)
+
+Monorepo `packages/core/src/message/types.ts` exports native SDK message/content aliases, while
+`agent/types.ts` defines string-or-readonly-array `AgentInstructions`. App's existing core barrel re-exports them.
+`engine/execute/module.ts` sends only the leading system run as SDK instructions; remaining configured messages
+retain order in a transient prefix and never enter checkpoints or pending-call replay. Skills runtime metadata is a
+separate system block; standalone catalog instructions remain text. `charts/agent-app/README.md.gotmpl` links this
+API guidance. Existing string configuration, manifests, values, probes, images, env, routes and RBAC remain compatible.
