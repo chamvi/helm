@@ -109,7 +109,11 @@ The CLI loads `dist/index.mjs`, or, without an entry, builds the default app fro
 Adoption requires a chamvi release exporting `gitSkills` and `loadSkillBundle` from `@chamvi/skills`.
 Install `@chamvi/skills` as an application runtime dependency, using a compatible released version.
 `gitSkills` comes from the main entry, with no `/module` entry or app helper imports. The factory does no I/O;
-startup installs and verifies required sources. Configure reviewed sources in app code:
+startup installs and verifies required sources. Skills owns its data types, validation, catalogs and scoped
+`load_skill`; core coordinates preparation/cancellation and app forwards configuration. Core/app do not depend on
+skills. Built-in factories carry their runtime automatically, with no module registration. Custom ready values/loaders
+use `defineSkill`/`defineSkillSource` from `@chamvi/skills`; custom loaders own retrieval and reviewed-pin verification.
+Configure reviewed sources in app code:
 
 ```ts
 import { createApp, defineAgent } from '@chamvi/app';

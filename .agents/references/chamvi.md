@@ -28,14 +28,17 @@ Fixed: 0.2.0 double-converted string models in `installDefaultProvider`; chamvi 
 ships the fix. The fixture app passes a model object, so it never depended on that fix; its `^0.2.0` range resolves to
 0.2.1.
 
-## First-class skills compatibility check (2026-10-29, unreleased)
+## First-class skills compatibility check (2026-10-30, unreleased)
 
-Checked monorepo `ffec9bdc` (`packages/core/src/skill/`, Engine preparation,
-`packages/skills/src/{source,bundle,prepare}/`, `packages/app/src/modules/{engine,agents}/`).
+Checked monorepo `de1f72e8` (`packages/core/src/skill/`, Engine preparation,
+`packages/skills/src/{catalog,runtime,source,bundle,prepare}/`, `packages/app/src/modules/{engine,agents}/`).
 `gitSkills` and all filesystem bundle helpers belong to the `@chamvi/skills` main entry; there is no skills `/module`
-or app compatibility export. Core owns generic startup coordination/scoped `load_skill`; app forwards defaults and
-agent extras. Globals/code sources prepare before `engineCreated`, folder extras later before serving. Check skips
-skill providers and migrate skips preparation. Pin mismatch prevents channels/HTTP/model work.
+or app compatibility export. Core owns generic preparation/cancellation and contributed-tool execution; skills owns
+domain types, validation, catalogs, source caches/fingerprints and scoped `load_skill`. App forwards defaults and agent extras.
+Core/app have no skills dependency; the main entry remains app-free. Factory inputs carry their runtime without
+registration, while custom raw values/loaders use skills' `defineSkill`/`defineSkillSource` adapters. Custom loaders
+own retrieval and reviewed-pin verification. Globals/code sources prepare before `engineCreated`, folder extras later
+before serving. Check skips skill providers and migrate skips preparation. Pin mismatch prevents channels/HTTP/model work.
 
 `charts/agent-app/templates/_helpers.tpl` already supplies uid/gid 1000, a read-only root and writable `/tmp` to both
 Deployment and CronJobs. README source/generated docs explain distinct managed `/tmp` corpora, runtime skills
@@ -45,3 +48,6 @@ routes, mounts or RBAC. Sandbox policy selects only sandbox pods; source fetches
 Ready `loadSkillBundle` snapshots remain compatible with explicit readable image assets. Review content and full
 commit pins independently; upgrades preserve saved results but pending/future loads use the new snapshot.
 This checks proposed integration, not a newly published package/chart contract.
+
+Runtime ownership rechecked against monorepo `de1f72e8` (2026-10-30). No chart template, values, schema, RBAC,
+probe, dependency or fixture changes are needed; this follow-up updates import/ownership guidance only.
