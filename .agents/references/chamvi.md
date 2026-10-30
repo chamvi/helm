@@ -27,3 +27,36 @@ against the source, never against the 011 plans, whose quoted contract predates 
 Fixed: 0.2.0 double-converted string models in `installDefaultProvider`; chamvi PR #41 fixed it and 0.2.1 (published)
 ships the fix. The fixture app passes a model object, so it never depended on that fix; its `^0.2.0` range resolves to
 0.2.1.
+
+## First-class skills compatibility check (2026-10-30, unreleased)
+
+Checked monorepo `de1f72e8` (`packages/core/src/skill/`, Engine preparation,
+`packages/skills/src/{catalog,runtime,source,bundle,prepare}/`, `packages/app/src/modules/{engine,agents}/`).
+`gitSkills` and all filesystem bundle helpers belong to the `@chamvi/skills` main entry; there is no skills `/module`
+or app compatibility export. Core owns generic preparation/cancellation and contributed-tool execution; skills owns
+domain types, validation, catalogs, source caches/fingerprints and scoped `load_skill`. App forwards defaults and agent extras.
+Core/app have no skills dependency; the main entry remains app-free. Factory inputs carry their runtime without
+registration, while custom raw values/loaders use skills' `defineSkill`/`defineSkillSource` adapters. Custom loaders
+own retrieval and reviewed-pin verification. Globals/code sources prepare before `engineCreated`, folder extras later
+before serving. Check skips skill providers and migrate skips preparation. Pin mismatch prevents channels/HTTP/model work.
+
+`charts/agent-app/templates/_helpers.tpl` already supplies uid/gid 1000, a read-only root and writable `/tmp` to both
+Deployment and CronJobs. README source/generated docs explain distinct managed `/tmp` corpora, runtime skills
+package/Node >=22.20/Git (the current base image lacks Git), private source credentials/app egress, startup probes
+and clone-settlement shutdown. Existing `probes.startup` timing fields suffice. No new chart values, env variables,
+routes, mounts or RBAC. Sandbox policy selects only sandbox pods; source fetches originate in app/job pods.
+Ready `loadSkillBundle` snapshots remain compatible with explicit readable image assets. Review content and full
+commit pins independently; upgrades preserve saved results but pending/future loads use the new snapshot.
+This checks proposed integration, not a newly published package/chart contract.
+
+Runtime ownership rechecked against monorepo `de1f72e8` (2026-10-30). No chart template, values, schema, RBAC,
+probe, dependency or fixture changes are needed; this follow-up updates import/ownership guidance only.
+
+## Structured instructions follow-up (2026-10-30, unreleased)
+
+Monorepo `packages/core/src/message/types.ts` exports native SDK message/content aliases, while
+`agent/types.ts` defines string-or-readonly-array `AgentInstructions`. App's existing core barrel re-exports them.
+`engine/execute/module.ts` sends only the leading system run as SDK instructions; remaining configured messages
+retain order in a transient prefix and never enter checkpoints or pending-call replay. Skills runtime metadata is a
+separate system block; standalone catalog instructions remain text. `charts/agent-app/README.md.gotmpl` links this
+API guidance. Existing string configuration, manifests, values, probes, images, env, routes and RBAC remain compatible.

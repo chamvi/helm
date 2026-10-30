@@ -104,6 +104,88 @@ so tini stays PID 1: the Deployment runs `command + ["start"]`, each CronJob `co
 The CLI loads `dist/index.mjs`, or, without an entry, builds the default app from the `agents/` folder
 (`CHAMVI_AGENTS_DIR`, relative to `/app`); either way the agents ship inside the image.
 
+### Approved skills (optional)
+
+Adoption requires a chamvi release exporting `gitSkills` and `loadSkillBundle` from `@chamvi/skills`.
+Install `@chamvi/skills` as an application runtime dependency, using a compatible released version.
+`gitSkills` comes from the main entry, with no `/module` entry or app helper imports. The factory does no I/O;
+startup installs and verifies required sources. Skills owns its data types, validation, catalogs and scoped
+`load_skill`; core coordinates preparation/cancellation and app forwards configuration. Core/app do not depend on
+skills. Built-in factories carry their runtime automatically, with no module registration. Custom ready values/loaders
+use `defineSkill`/`defineSkillSource` from `@chamvi/skills`; custom loaders own retrieval and reviewed-pin verification.
+Configure reviewed sources in app code:
+
+```ts
+import { createApp, defineAgent } from '@chamvi/app';
+import { gitSkills } from '@chamvi/skills';
+
+// These source/full-commit values and name/version/hash arrays are reviewed app configuration.
+const common = gitSkills({
+    source: reviewedSource,
+    revision: reviewedFullCommit,
+    directory: '/tmp/chamvi-skills/common',
+    approved: reviewedCommonPins,
+});
+const extras = gitSkills({
+    source: reviewedSource,
+    revision: reviewedFullCommit,
+    directory: '/tmp/chamvi-skills/maintainer',
+    approved: reviewedMaintainerPins,
+});
+const maintainer = defineAgent({
+    name: 'maintainer', instructions: 'Maintain the approved repository.', skills: [extras],
+});
+export default createApp({ agents: [maintainer], skills: [common], model: configuredModel });
+```
+
+Agent `instructions` remain compatible with strings and also accept ordered native system/user/assistant arrays.
+`AgentInstructions` and the native message/content types come from `@chamvi/core`, also re-exported by
+`@chamvi/app`. Leading system blocks use SDK instructions; examples and later system blocks remain ordered
+before the run transcript. Configured blocks stay out of checkpoints and are rebuilt after approval pauses.
+First-class skills append catalog metadata as a separate system block; manual `SkillCatalog.instructions` stays
+text for explicit composition. See the [typed instructions guide](https://chamvi.dev/guide/agents#instructions).
+
+App defaults apply to every code/folder agent; agent skills add extras. Direct `Engine({ skills })` accepts the same
+inputs. Chamvi appends metadata and supplies a scoped `load_skill` automatically. Computing a digest with
+`hashSkillBundle` is a review aid, never approval; pin both a full source commit and independently reviewed content.
+Failed verification aborts startup before channels, HTTP or model work, including on `run-job`. Globals/code sources
+prepare before `engineCreated`; folder-agent extras prepare later, before serving. `chamvi start --check` remains a
+static skill check: it does not load skill providers, install sources or verify remote bytes/availability.
+
+Runtime Git preparation requires Node >=22.20 and Git. The unchanged `ghcr.io/chamvi/node:24` base has no Git;
+add it in the application's runtime image, preserving the final uid 1000 (insert after the existing pinned `FROM`):
+
+```dockerfile
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+USER 1000:1000
+# Keep the existing runtime COPY, EXPOSE and CMD instructions.
+```
+
+Both Deployment and CronJobs run uid/gid 1000 with a read-only root and a writable `/tmp` emptyDir.
+Use distinct absolute managed corpora such as `/tmp/chamvi-skills/common` and `/tmp/chamvi-skills/maintainer`;
+`/app` cannot be a startup destination. No new chart mount, value or RBAC is needed. Each pod/job prepares its own
+corpus; a container restart may retain the emptyDir, but startup still re-verifies the configured source and pins.
+
+Source fetching happens in the application pod. Supply working source credentials and network access there and in
+every CronJob. `secrets` supplies envFrom, but a generic token variable alone does not configure the clone SDK's
+credential flow. `sandbox.networkPolicy` and sandbox FQDN policy select sandbox pods only; external app egress
+policies must allow DNS and the configured source/auth endpoints. Budget startup fetch/verification time in the
+[probes](#probes-and-shutdown). Stop joins owned cleanup and can wait for a clone that ignores cancellation.
+
+Ready snapshots remain an alternative: copy approved passive bundles into the runtime image, readable by uid 1000,
+and pass `loadSkillBundle({ name, version, hash, directory: '/app/approved-skills/audit' })` in `skills`.
+The starter image copies JS/dependencies only, so add an explicit final-stage asset `COPY`. Manual
+`loadSkillBundles` catalogs remain supported with explicit instruction/tool composition. The chart does not approve
+content or grant tool permissions.
+
+Upgrade reviewed source commits/content pins together. Saved load results keep their original checkpoint bytes;
+pending/future loads use the new verified snapshot. Global pin changes do not change folder revisions: finish or
+cancel unsettled runs first if mixed-version disclosure is unacceptable. External bundle directories are not watched;
+changed bytes under an old pin fail verification after restart. See [approved skills](https://chamvi.dev/guide/skills).
+
 ## Secrets and env
 
 `secrets` names existing Secrets; each becomes an `envFrom` `secretRef` on the Deployment and the CronJobs
@@ -151,15 +233,29 @@ webhooks at `<basePath>/channels/webhook/<agent><path>`. The Ingress routes `<ba
 
 | | Path | Period | Failures |
 |---|---|---|---|
-| startup | `<basePath>/healthz` | 2 s | 60 (120 s for migrations) |
+| startup | `<basePath>/healthz` | 2 s | 60 (120 s for startup) |
 | liveness | `<basePath>/healthz` | 10 s | 3 |
 | readiness | `<basePath>/readyz` | 5 s | 2 |
+
+Required skill preparation finishes before HTTP starts, so `/healthz` stays unavailable while sources are fetched
+and verified. Budget migrations plus source fetch and verification from measured latency. For example, these
+existing values allow approximately 300 seconds (CronJobs have no HTTP probe but still prepare skills):
+
+```yaml
+probes:
+    startup:
+        periodSeconds: 2
+        timeoutSeconds: 2
+        failureThreshold: 150
+```
 
 On termination the pod sleeps `preStopSleepSeconds` (5, the native `sleep` action) so the endpoints drop it, then the
 CLI gets SIGTERM: readiness 503, channels stopped, HTTP closed, runs drained (30 s), the store closed. The CLI exits
 by force `CHAMVI_FORCE_EXIT_MS` (90 s) after the signal and the kubelet kills at `terminationGracePeriodSeconds` (120).
 The chart refuses a render where `preStopSleepSeconds * 1000 + CHAMVI_FORCE_EXIT_MS >= terminationGracePeriodSeconds * 1000`.
 It reads `env.CHAMVI_FORCE_EXIT_MS` only: a value set through a Secret escapes the check.
+Skill preparation owns its clone/cleanup work; cancellation can wait for clone settlement before drain.
+The CLI force-exit and pod grace period remain the operator bounds, so allow for this work when sizing them.
 
 ## CronJob mode
 
