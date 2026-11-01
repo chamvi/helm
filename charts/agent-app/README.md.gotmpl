@@ -150,11 +150,13 @@ text for explicit composition. See the [typed instructions guide](https://chamvi
 App defaults apply to every code/folder agent; agent skills add extras. Direct `Engine({ skills })` accepts the same
 inputs. Chamvi appends metadata and supplies a scoped `load_skill` automatically. Computing a digest with
 `hashSkillBundle` is a review aid, never approval; pin both a full source commit and independently reviewed content.
-Failed verification aborts startup before channels, HTTP or model work, including on `run-job`. Globals/code sources
-prepare before `engineCreated`; folder-agent extras prepare later, before serving. `chamvi start --check` remains a
+A failing app-wide or code-agent skill aborts startup before channels, HTTP or model work. A folder agent whose
+preparation fails becomes an agent issue: the other agents start and polling retries it with backoff; a `run-job` of
+that agent exits 1 (retryable) or 2 (configuration). Globals/code sources prepare before `engineCreated`; folder-agent
+extras prepare later, before serving. `chamvi start --check` remains a
 static skill check: it does not load skill providers, install sources or verify remote bytes/availability.
 
-Runtime Git preparation requires Node >=22.20 and Git. The unchanged `ghcr.io/chamvi/node:24` base has no Git;
+Runtime Git preparation requires Node >=24.3.0 and Git. The unchanged `ghcr.io/chamvi/node:24` base has no Git;
 add it in the application's runtime image, preserving the final uid 1000 (insert after the existing pinned `FROM`):
 
 ```dockerfile
@@ -286,6 +288,21 @@ leaving the runs alone; the Deployment applies the change, after which the Jobs 
 the CronJobs pick up a changed folder; a CronJob-only install with unsettled runs never applies one. Code agents are
 not affected.
 
+### Upgrading chamvi with CronJobs
+
+A minor chamvi upgrade that migrates the store (0.3 to 0.4) needs downtime, and the Deployment's `Recreate` strategy
+does not cover CronJobs: `CHAMVI_MIGRATE` defaults to `true` in job mode too, so an old Job pod started mid-upgrade
+writes runs the new version's one-time backfill never sees. Old and new processes must never share the store:
+
+1. Suspend every CronJob (`suspend: true` on each `cronJobs[]` entry, or
+   `kubectl patch cronjob <name> -p '{"spec":{"suspend":true}}'`) and wait for running Job pods to finish.
+2. Scale the Deployment to 0 and wait for its pods to exit; draining executions alone is not enough.
+3. Migrate once with the new image (`chamvi migrate` with `DATABASE_URL`), or let the new Deployment migrate on start
+   with the default `CHAMVI_MIGRATE=true`.
+4. Start only the new image, then resume the CronJobs with it.
+
+See [Upgrading to 0.4](https://chamvi.dev/guide/upgrading#upgrading-to-0-4).
+
 ## Sandbox pods
 
 With `sandbox.enabled` the app may run `@chamvi/sandbox-k8s` workspaces in `sandbox.namespace`. Select the provider in
@@ -294,7 +311,8 @@ the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or `sandboxModule({ provider:
 
 - Sandbox env for `env`: `CHAMVI_SANDBOX_IMAGE` (default `ghcr.io/chamvi/sandbox-dev:trixie`; `sandbox-node` is
   deprecated, pin a digest in production), `CHAMVI_SANDBOX_IMAGES` (the images the model may pick, a comma list),
-  `CHAMVI_GIT_CREDENTIAL_MODE`. `CHAMVI_GIT_TOKENS` belongs in a Secret.
+  `CHAMVI_GIT_TOKENS` (in a Secret). Since chamvi 0.4 a set `CHAMVI_GIT_CREDENTIAL_MODE` is refused at startup:
+  remove it from `env`.
 - The chart sets `CHAMVI_DEPLOYMENT` (the workspaces' `chamvi.dev/deployment` label) to the release's full name, so
   releases sharing a sandbox namespace never see each other's workspaces, and the app removes workspaces of runs its
   store no longer knows (under chamvi's `default` they wait for their 7 day lifetime). Workspaces created under another
