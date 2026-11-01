@@ -2,6 +2,9 @@
     "name": "agent-app-ci",
     "private": true,
     "type": "module",
+    "engines": {
+        "node": ">=24.3.0"
+    },
     "dependencies": {
         "@chamvi/app": "^0.3.0",
         "@chamvi/cli": "^0.3.0",
