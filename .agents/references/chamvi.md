@@ -1,6 +1,6 @@
 # chamvi monorepo correspondence
 
-Source: `chamvi/chamvi` master at `a9181d6` (2026-10-27, release 0.3.0), packages published on npm at 0.3.0. Verify
+Source: `chamvi/chamvi` tag `v0.4.0` (`38624a9`, 2026-11-01), packages published on npm at 0.4.0. Verify
 against the source, never against the 011 plans, whose quoted contract predates the channels rewrite.
 
 | chamvi | Path in the monorepo | Chart counterpart |
@@ -17,7 +17,7 @@ against the source, never against the 011 plans, whose quoted contract predates 
 | GitHub deliveries at `<basePath>/channels/github`, webhooks at `<basePath>/channels/webhook/<agent><path>` | `packages/http/src/channels/`, `packages/github/src/webhook/` | README only (one Service port serves all) |
 | `SANDBOX_LABELS` `app.kubernetes.io/managed-by: chamvi`, `app.kubernetes.io/component: sandbox` | `packages/sandbox/src/provider/constants.ts` | policy selectors; app pods are `component: app` |
 | pods create/get/list/delete, pods/exec get/create (websocket exec) | `packages/sandbox-k8s/src/client/helpers.ts` | the sandbox Role |
-| `CHAMVI_SANDBOX_PROVIDER` (`local`/`docker`/`kubernetes`), `CHAMVI_SANDBOX_NAMESPACE` required for kubernetes, `CHAMVI_SANDBOX_IMAGE` (default `ghcr.io/chamvi/sandbox-dev:trixie`), `CHAMVI_SANDBOX_IMAGES`, `CHAMVI_DEPLOYMENT` (label `chamvi.dev/deployment`, default `default`), `CHAMVI_GIT_TOKENS`, `CHAMVI_GIT_CREDENTIAL_MODE` | `packages/sandbox/src/module/module.ts` | the chart sets the namespace only; the provider is the app's choice (`env`) |
+| `CHAMVI_SANDBOX_PROVIDER` (`local`/`docker`/`kubernetes`), `CHAMVI_SANDBOX_NAMESPACE` required for kubernetes, `CHAMVI_SANDBOX_IMAGE` (default `ghcr.io/chamvi/sandbox-dev:trixie`), `CHAMVI_SANDBOX_IMAGES`, `CHAMVI_DEPLOYMENT` (label `chamvi.dev/deployment`, default `default`), `CHAMVI_GIT_TOKENS` (0.4 refuses a set `CHAMVI_GIT_CREDENTIAL_MODE`) | `packages/sandbox/src/module/module.ts` | the chart sets the namespace only; the provider is the app's choice (`env`) |
 | `CHAMVI_AGENTS_DIR` (default `./agents` when a directory), entry-less app `createApp({})` | `packages/app/src/modules/agents/`, `packages/cli/src/entry/` | none: agents ship in the image (`/app`) |
 | provider keys `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY`, `XAI_API_KEY` for `'<provider>/<model>'` strings | `packages/app/src/models/constants.ts` | README Secrets table |
 | `GITHUB_APP_*`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_INSTALLATION_ID`, `GITHUB_API_URL` | `packages/github/src/module/` | README Secrets table |
@@ -42,7 +42,7 @@ before serving. Check skips skill providers and migrate skips preparation. Pin m
 
 `charts/agent-app/templates/_helpers.tpl` already supplies uid/gid 1000, a read-only root and writable `/tmp` to both
 Deployment and CronJobs. README source/generated docs explain distinct managed `/tmp` corpora, runtime skills
-package/Node >=22.20/Git (the current base image lacks Git), private source credentials/app egress, startup probes
+package/Node >=24.3.0/Git (the current base image lacks Git), private source credentials/app egress, startup probes
 and clone-settlement shutdown. Existing `probes.startup` timing fields suffice. No new chart values, env variables,
 routes, mounts or RBAC. Sandbox policy selects only sandbox pods; source fetches originate in app/job pods.
 Ready `loadSkillBundle` snapshots remain compatible with explicit readable image assets. Review content and full
