@@ -104,7 +104,10 @@ The image is the agent repository's own (stage 2 `FROM ghcr.io/chamvi/node:26`, 
 `ENTRYPOINT ["/usr/bin/tini", "--"]`). The value `command` renders into the container **args**, never `command:`,
 so tini stays PID 1: the Deployment runs `command + ["start"]`, each CronJob `command + ["run-job", agent, subscription]`.
 The CLI loads `dist/index.mjs`, or, without an entry, builds the default app from the `agents/` folder
-(`CHAMVI_AGENTS_DIR`, relative to `/app`); either way the agents ship inside the image.
+(`CHAMVI_AGENTS_DIR`, relative to `/app`). Since chamvi 0.5.1 an app can also load agents from npm packages by name
+(`createApp({ agents })`, `chamvi.json` or `env.CHAMVI_AGENTS`, comma-separated); such a package must be installed in
+the image's `node_modules`, and a version bump of it cancels its agents' unsettled runs on the next start. Either way
+the agents ship inside the image.
 
 ### Approved skills (optional)
 
@@ -225,6 +228,17 @@ address.
 The derived `CHAMVI_PUBLIC_URL` is the origin only: the app appends `basePath` once when it builds approval links
 (`<origin><basePath>/ui/approvals?run=<id>&approval=<id>`, ids only, never a credential). When TLS terminates outside
 the Ingress (a load balancer, a default certificate), set `env.CHAMVI_PUBLIC_URL` to the `https://` origin.
+
+### Knowledge collections (optional)
+
+Requires chamvi 0.5.1 or newer (managed knowledge collections) and `knowledgeModule()` from
+`@chamvi/knowledge/module` in the app. Managed collections embed with `env.CHAMVI_KNOWLEDGE_MODEL`
+(`'<provider>/<model id>'`, for example `openai/text-embedding-3-small`), which wins over
+`knowledgeModule({ embeddingModel })`; its provider key comes through `secrets` like any model key. Without either,
+creating a managed collection answers 409; declared collections are unaffected. The module serves
+`<basePath>/knowledge/collections/...`, authenticated by the app's tokens (`knowledge:read`, `knowledge:write`), so
+the probes, Ingress and ServiceMonitor need no change. The knowledge repository is in memory, per pod, until a
+persistent backend ships: managed collections are lost on restart and not shared between replicas.
 
 ## HTTP
 
