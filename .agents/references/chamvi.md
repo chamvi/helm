@@ -1,6 +1,6 @@
 # chamvi monorepo correspondence
 
-Source: `chamvi/chamvi` tag `v0.5.0` (`f3439e0`, 2026-11-02), packages published on npm at 0.5.0. Verify
+Source: `chamvi/chamvi` tag `v0.5.1` (`8fc7b89`, 2026-11-02), packages published on npm at 0.5.1. Verify
 against the source, never against the 011 plans, whose quoted contract predates the channels rewrite.
 
 | chamvi | Path in the monorepo | Chart counterpart |
@@ -19,10 +19,11 @@ against the source, never against the 011 plans, whose quoted contract predates 
 | pods create/get/list/delete, pods/exec get/create (websocket exec) | `packages/sandbox-k8s/src/client/helpers.ts` | the sandbox Role |
 | `CHAMVI_SANDBOX_PROVIDER` (`local`/`docker`/`kubernetes`), `CHAMVI_SANDBOX_NAMESPACE` required for kubernetes, `CHAMVI_SANDBOX_IMAGE` (default `ghcr.io/chamvi/sandbox-dev:trixie`), `CHAMVI_SANDBOX_IMAGES`, `CHAMVI_DEPLOYMENT` (label `chamvi.dev/deployment`, default `default`), `CHAMVI_GIT_TOKENS` (0.4 refuses a set `CHAMVI_GIT_CREDENTIAL_MODE`) | `packages/sandbox/src/module/module.ts` | the chart sets the namespace only; the provider is the app's choice (`env`) |
 | `CHAMVI_AGENTS_DIR` (default `./agents` when a directory), entry-less app `createApp({})` | `packages/app/src/modules/agents/`, `packages/cli/src/entry/` | none: agents ship in the image (`/app`) |
+| `CHAMVI_AGENTS` (optional, comma-separated npm package specifiers of package agents, since 0.5.1, chamvi#121) | `packages/app/src/modules/agents/` | README "The app and its image" only: plain `env` value, the packages ship in the image's `node_modules` |
 | provider keys `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY`, `XAI_API_KEY` for `'<provider>/<model>'` strings | `packages/app/src/models/constants.ts` | README Secrets table |
 | `GITHUB_APP_*`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_INSTALLATION_ID`, `GITHUB_API_URL` | `packages/github/src/module/` | README Secrets table |
 | `OPENCLAW_*` | `packages/channel-openclaw/src/module/` | README Secrets table |
-| `CHAMVI_KNOWLEDGE_MODEL` (optional, the managed collections' embedding model, read only by `knowledgeModule()`), routes `<basePath>/knowledge/collections/...` (`knowledge:read`/`knowledge:write`), unreleased after 0.5.0 (chamvi#119) | `packages/knowledge/src/module/`, `packages/knowledge/src/routes/` | README "Knowledge collections" only: plain `env` value, key through `secrets`; no template, values or schema change |
+| `CHAMVI_KNOWLEDGE_MODEL` (optional, the managed collections' embedding model, read only by `knowledgeModule()`), routes `<basePath>/knowledge/collections/...` (`knowledge:read`/`knowledge:write`), since 0.5.1 (chamvi#119) | `packages/knowledge/src/module/`, `packages/knowledge/src/routes/` | README "Knowledge collections" only: plain `env` value, key through `secrets`; no template, values or schema change |
 | image `ghcr.io/chamvi/node:26`: tini entrypoint, uid 1000, workdir `/app` | `images/node/Dockerfile` | `args` not `command`, the security contexts, `ci/app/Dockerfile` |
 
 Fixed: 0.2.0 double-converted string models in `installDefaultProvider`; chamvi PR #41 fixed it and 0.2.1 (published)
