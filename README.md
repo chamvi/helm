@@ -22,9 +22,9 @@
 
 ## Install
 
-Application images must use Node.js **24.3.0 or newer** for the current chamvi runtime. Node 22 is no longer supported.
+Application images must use Node.js **26.0.0 or newer** for chamvi 0.5 and later (chamvi 0.4 needs 24.3.0 or newer).
 The chart accepts custom images and cannot enforce their Node version; rebuild older images before upgrading chamvi.
-The CI fixture declares the same minimum and already uses Node 24 base images.
+The CI fixture declares the same minimum and uses the Node 26 base images.
 
 ```sh
 helm install triage oci://ghcr.io/chamvi/helm/agent-app --version 0.1.0 -n agents \

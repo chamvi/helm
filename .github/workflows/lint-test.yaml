@@ -84,7 +84,7 @@ jobs:
         working-directory: ./charts
 
   # The fixture app (ci/app) installs the published @chamvi packages from npm on the
-  # public ghcr.io/chamvi/node:24 base; its run-job and approval-link checks run here.
+  # public ghcr.io/chamvi/node:26 base; its run-job and approval-link checks run here.
   fixture:
     runs-on: ubuntu-latest
     steps:

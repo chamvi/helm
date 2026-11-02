@@ -100,7 +100,7 @@ spec:
 
 ## The app and its image
 
-The image is the agent repository's own (stage 2 `FROM ghcr.io/chamvi/node:24`, workdir `/app`, user 1000,
+The image is the agent repository's own (stage 2 `FROM ghcr.io/chamvi/node:26`, workdir `/app`, user 1000,
 `ENTRYPOINT ["/usr/bin/tini", "--"]`). The value `command` renders into the container **args**, never `command:`,
 so tini stays PID 1: the Deployment runs `command + ["start"]`, each CronJob `command + ["run-job", agent, subscription]`.
 The CLI loads `dist/index.mjs`, or, without an entry, builds the default app from the `agents/` folder
@@ -156,7 +156,7 @@ that agent exits 1 (retryable) or 2 (configuration). Globals/code sources prepar
 extras prepare later, before serving. `chamvi start --check` remains a
 static skill check: it does not load skill providers, install sources or verify remote bytes/availability.
 
-Runtime Git preparation requires Node >=24.3.0 and Git. The unchanged `ghcr.io/chamvi/node:24` base has no Git;
+Runtime Git preparation requires Node >=26.0.0 and Git. The unchanged `ghcr.io/chamvi/node:26` base has no Git;
 add it in the application's runtime image, preserving the final uid 1000 (insert after the existing pinned `FROM`):
 
 ```dockerfile
