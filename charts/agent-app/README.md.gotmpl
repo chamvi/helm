@@ -226,6 +226,17 @@ The derived `CHAMVI_PUBLIC_URL` is the origin only: the app appends `basePath` o
 (`<origin><basePath>/ui/approvals?run=<id>&approval=<id>`, ids only, never a credential). When TLS terminates outside
 the Ingress (a load balancer, a default certificate), set `env.CHAMVI_PUBLIC_URL` to the `https://` origin.
 
+### Knowledge collections (optional)
+
+Requires the chamvi release after 0.5.0 (managed knowledge collections) and `knowledgeModule()` from
+`@chamvi/knowledge/module` in the app. Managed collections embed with `env.CHAMVI_KNOWLEDGE_MODEL`
+(`'<provider>/<model id>'`, for example `openai/text-embedding-3-small`), which wins over
+`knowledgeModule({ embeddingModel })`; its provider key comes through `secrets` like any model key. Without either,
+creating a managed collection answers 409; declared collections are unaffected. The module serves
+`<basePath>/knowledge/collections/...`, authenticated by the app's tokens (`knowledge:read`, `knowledge:write`), so
+the probes, Ingress and ServiceMonitor need no change. The knowledge repository is in memory, per pod, until a
+persistent backend ships: managed collections are lost on restart and not shared between replicas.
+
 ## HTTP
 
 One container port, `3000` named `http`; the Service maps `service.port` (80) to it. Every path lives under `basePath`

@@ -22,6 +22,7 @@ against the source, never against the 011 plans, whose quoted contract predates 
 | provider keys `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY`, `XAI_API_KEY` for `'<provider>/<model>'` strings | `packages/app/src/models/constants.ts` | README Secrets table |
 | `GITHUB_APP_*`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_INSTALLATION_ID`, `GITHUB_API_URL` | `packages/github/src/module/` | README Secrets table |
 | `OPENCLAW_*` | `packages/channel-openclaw/src/module/` | README Secrets table |
+| `CHAMVI_KNOWLEDGE_MODEL` (optional, the managed collections' embedding model, read only by `knowledgeModule()`), routes `<basePath>/knowledge/collections/...` (`knowledge:read`/`knowledge:write`), unreleased after 0.5.0 (chamvi#119) | `packages/knowledge/src/module/`, `packages/knowledge/src/routes/` | README "Knowledge collections" only: plain `env` value, key through `secrets`; no template, values or schema change |
 | image `ghcr.io/chamvi/node:26`: tini entrypoint, uid 1000, workdir `/app` | `images/node/Dockerfile` | `args` not `command`, the security contexts, `ci/app/Dockerfile` |
 
 Fixed: 0.2.0 double-converted string models in `installDefaultProvider`; chamvi PR #41 fixed it and 0.2.1 (published)
