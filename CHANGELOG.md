@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/chamvi/helm/compare/root-0.1.4...root-0.1.5) (2026-11-02)
+
+
+### Bug Fixes
+
+* **agent-app:** document chamvi 0.5.1 (knowledge collections, package agents) ([#16](https://github.com/chamvi/helm/issues/16)) ([133e0e7](https://github.com/chamvi/helm/commit/133e0e7f1e050692654da21d269ace9dd67c0395))
+
 ## [0.1.4](https://github.com/chamvi/helm/compare/root-0.1.3...root-0.1.4) (2026-11-02)
 
 
