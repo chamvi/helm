@@ -1,6 +1,6 @@
 # chamvi monorepo correspondence
 
-Source: `chamvi/chamvi` tag `v0.4.0` (`38624a9`, 2026-11-01), packages published on npm at 0.4.0. Verify
+Source: `chamvi/chamvi` tag `v0.5.0` (`f3439e0`, 2026-11-02), packages published on npm at 0.5.0. Verify
 against the source, never against the 011 plans, whose quoted contract predates the channels rewrite.
 
 | chamvi | Path in the monorepo | Chart counterpart |
@@ -22,7 +22,7 @@ against the source, never against the 011 plans, whose quoted contract predates 
 | provider keys `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY`, `XAI_API_KEY` for `'<provider>/<model>'` strings | `packages/app/src/models/constants.ts` | README Secrets table |
 | `GITHUB_APP_*`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_INSTALLATION_ID`, `GITHUB_API_URL` | `packages/github/src/module/` | README Secrets table |
 | `OPENCLAW_*` | `packages/channel-openclaw/src/module/` | README Secrets table |
-| image `ghcr.io/chamvi/node:24`: tini entrypoint, uid 1000, workdir `/app` | `images/node/Dockerfile` | `args` not `command`, the security contexts, `ci/app/Dockerfile` |
+| image `ghcr.io/chamvi/node:26`: tini entrypoint, uid 1000, workdir `/app` | `images/node/Dockerfile` | `args` not `command`, the security contexts, `ci/app/Dockerfile` |
 
 Fixed: 0.2.0 double-converted string models in `installDefaultProvider`; chamvi PR #41 fixed it and 0.2.1 (published)
 ships the fix. The fixture app passes a model object, so it never depended on that fix; its `^0.2.0` range resolves to
@@ -42,7 +42,7 @@ before serving. Check skips skill providers and migrate skips preparation. Pin m
 
 `charts/agent-app/templates/_helpers.tpl` already supplies uid/gid 1000, a read-only root and writable `/tmp` to both
 Deployment and CronJobs. README source/generated docs explain distinct managed `/tmp` corpora, runtime skills
-package/Node >=24.3.0/Git (the current base image lacks Git), private source credentials/app egress, startup probes
+package/Node >=26.0.0/Git (the current base image lacks Git), private source credentials/app egress, startup probes
 and clone-settlement shutdown. Existing `probes.startup` timing fields suffice. No new chart values, env variables,
 routes, mounts or RBAC. Sandbox policy selects only sandbox pods; source fetches originate in app/job pods.
 Ready `loadSkillBundle` snapshots remain compatible with explicit readable image assets. Review content and full

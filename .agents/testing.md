@@ -4,7 +4,7 @@
 |---|---|---|
 | helm-unittest | `make unittest` | one suite per template or concern in `charts/agent-app/tests/`, against `values.schema.json` |
 | contract tests | `make contract` | `scripts/tests/*.py`: hostile values without schema (`--skip-schema-validation`), duplicate YAML keys, long names, packaged hook, ci matrix, release wiring, docs |
-| fixture | `make fixture` | builds `ci/app` (the published `@chamvi/app`/`@chamvi/cli` on `ghcr.io/chamvi/node:24`) and runs the CronJob args and the approval-link origin against it (`AGENT_APP_CI_IMAGE`) |
+| fixture | `make fixture` | builds `ci/app` (the published `@chamvi/app`/`@chamvi/cli` on `ghcr.io/chamvi/node:26`) and runs the CronJob args and the approval-link origin against it (`AGENT_APP_CI_IMAGE`) |
 | render matrix | `make template` | every `ci/*-values.yaml` and `ci/render/*-values.yaml` with the ServiceMonitor and Cilium APIs |
 | lint | `make lint`, `make ct-lint` | `helm lint` per ci file, yamllint, chart-testing (dockerized `quay.io/helmpack/chart-testing:v3.15.0`) |
 | coverage | `make lint-values-coverage` | every `.Values.*` path a template reads exists in `values.yaml` |
