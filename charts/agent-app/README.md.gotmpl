@@ -303,6 +303,10 @@ writes runs the new version's one-time backfill never sees. Old and new processe
 
 See [Upgrading to 0.4](https://chamvi.dev/guide/upgrading#upgrading-to-0-4).
 
+chamvi 0.5 ships no store migration, so 0.4 to 0.5 needs none of these steps. It needs Node.js 26 images for the
+Deployment and the CronJobs alike: rebuild the application image on `ghcr.io/chamvi/node:26` first. See
+[Upgrading to 0.5](https://chamvi.dev/guide/upgrading#upgrading-to-0-5).
+
 ## Sandbox pods
 
 With `sandbox.enabled` the app may run `@chamvi/sandbox-k8s` workspaces in `sandbox.namespace`. Select the provider in
