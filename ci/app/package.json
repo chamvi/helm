@@ -6,8 +6,8 @@
         "node": ">=26.0.0"
     },
     "dependencies": {
-        "@chamvi/app": "^0.5.1",
-        "@chamvi/cli": "^0.5.1",
+        "@chamvi/app": "^0.6.0",
+        "@chamvi/cli": "^0.6.0",
         "ai": "^7.0.150",
         "pg": "^8",
         "typeorm": "^1.1.2"

@@ -321,6 +321,11 @@ chamvi 0.5 ships no store migration, so 0.4 to 0.5 needs none of these steps. It
 Deployment and the CronJobs alike: rebuild the application image on `ghcr.io/chamvi/node:26` first. See
 [Upgrading to 0.5](https://chamvi.dev/guide/upgrading#upgrading-to-0-5).
 
+chamvi 0.6 ships a store migration again (`RunLineage1792800000000`): it adds the run lineage columns, backfills them
+and rewrites stored hand-off parents, so 0.5 to 0.6 needs the steps above. Before step 2, let running hand-off trees
+finish: a parent that resumes under 0.6 can start a second child. See
+[Upgrading to 0.6](https://chamvi.dev/guide/upgrading#upgrading-to-0-6).
+
 ## Sandbox pods
 
 With `sandbox.enabled` the app may run `@chamvi/sandbox-k8s` workspaces in `sandbox.namespace`. Select the provider in

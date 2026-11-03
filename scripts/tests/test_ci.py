@@ -61,7 +61,7 @@ class CiMatrix(unittest.TestCase):
         package = json.loads((ROOT / "ci/app/package.json").read_text())
         deps = package["dependencies"]
         for name in ("@chamvi/app", "@chamvi/cli"):
-            self.assertTrue(deps[name].startswith("^0.5."), f"{name} must track the published 0.5 line")
+            self.assertTrue(deps[name].startswith("^0.6."), f"{name} must track the published 0.6 line")
 
 
     def test_kind_runs_calico_so_the_sandbox_policy_is_enforced(self):
