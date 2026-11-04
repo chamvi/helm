@@ -119,7 +119,7 @@ use `defineSkill`/`defineSkillSource` from `@chamvi/skills`; custom loaders own 
 Configure reviewed sources in app code:
 
 ```ts
-import { createApp, defineAgent } from '@chamvi/app';
+import { createApp, defineModelAgent } from '@chamvi/app';
 import { gitSkills } from '@chamvi/skills';
 
 // These source/full-commit values and name/version/hash arrays are reviewed app configuration.
@@ -135,7 +135,7 @@ const extras = gitSkills({
     directory: '/tmp/chamvi-skills/maintainer',
     approved: reviewedMaintainerPins,
 });
-const maintainer = defineAgent({
+const maintainer = defineModelAgent({
     name: 'maintainer', instructions: 'Maintain the approved repository.', skills: [extras],
 });
 export default createApp({ agents: [maintainer], skills: [common], model: configuredModel });
@@ -323,6 +323,11 @@ chamvi 0.6 ships a store migration again (`RunLineage1792800000000`): it adds th
 and rewrites stored hand-off parents, so 0.5 to 0.6 needs the steps above. Before step 2, let running hand-off trees
 finish: a parent that resumes under 0.6 can start a second child. See
 [Upgrading to 0.6](https://chamvi.dev/guide/upgrading#upgrading-to-0-6).
+
+chamvi 0.7 ships no store migration, so 0.6 to 0.7 needs none of these steps, and no env variable, route or image
+changes. The upgrade is a code change in the application: `defineAgent()` is removed, so rename every call to
+`defineModelAgent()` (same input, same checks) before building the new image. See
+[Upgrading to 0.7](https://chamvi.dev/guide/upgrading#upgrading-to-0-7).
 
 ## Sandbox pods
 

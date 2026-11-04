@@ -4,7 +4,7 @@
  * For the full copyright and license information,
  * view the LICENSE file that was distributed with this source code.
  */
-import { createApp, cron, defineAgent, http } from '@chamvi/app';
+import { createApp, cron, defineModelAgent, http } from '@chamvi/app';
 import { simulateReadableStream } from 'ai';
 import { MockLanguageModelV4 } from 'ai/test';
 
@@ -25,7 +25,7 @@ const model = new MockLanguageModelV4({
         ] }),
     }),
 });
-export default createApp({ agents: [defineAgent({
+export default createApp({ agents: [defineModelAgent({
     name: 'ping', model, instructions: 'Answer pong.',
     channels: [http.on(), cron.on('0 0 1 1 *')],
 })] });
