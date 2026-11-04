@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/chamvi/helm/compare/agent-app-0.1.6...agent-app-0.1.7) (2026-11-04)
+
+
+### Bug Fixes
+
+* **agent-app:** document the chamvi 0.7 upgrade ([254be60](https://github.com/chamvi/helm/commit/254be60329450eb25084e7b9a9d99aeeeec9f36c))
+
 ## [0.1.6](https://github.com/chamvi/helm/compare/agent-app-0.1.5...agent-app-0.1.6) (2026-11-03)
 
 
