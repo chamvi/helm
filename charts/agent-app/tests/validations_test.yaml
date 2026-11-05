@@ -34,7 +34,7 @@ tests:
         PORT: "8080"
     asserts:
       - failedTemplate:
-          errorMessage: "agent-app: env.PORT is set by the chart (PORT, CHAMVI_BASE_PATH, CHAMVI_SCHEDULER with cronJobs, CHAMVI_SANDBOX_NAMESPACE with sandbox.enabled); use the matching value instead."
+          errorMessage: "agent-app: env.PORT is set by the chart (PORT, CHAMVI_BASE_PATH, CHAMVI_SCHEDULER with cronJobs, CHAMVI_SANDBOX_NAMESPACE with sandbox.enabled, CHAMVI_SANDBOX_PERSISTENCE and CHAMVI_SANDBOX_STORAGE_CLASS with sandbox.persistence); use the matching value instead."
   - it: refuses a HOST the kubelet probes cannot reach
     values: [values/base.yaml]
     set:

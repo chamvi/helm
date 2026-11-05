@@ -129,3 +129,22 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content: {name: CHAMVI_SANDBOX_NAMESPACE, value: sandbox}
+  - it: renders the persistence env only with sandbox.persistence.enabled
+    template: templates/deployment.yaml
+    set:
+      sandbox: {enabled: true, namespace: sandbox, persistence: {enabled: true, storageClassName: fast}}
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: CHAMVI_SANDBOX_PERSISTENCE, value: "true"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: CHAMVI_SANDBOX_STORAGE_CLASS, value: fast}
+  - it: renders no persistence env by default
+    template: templates/deployment.yaml
+    set:
+      sandbox: {enabled: true, namespace: sandbox}
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content: {name: CHAMVI_SANDBOX_PERSISTENCE, value: "true"}
