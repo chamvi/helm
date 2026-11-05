@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/chamvi/helm/compare/agent-app-0.1.7...agent-app-0.1.8) (2026-11-05)
+
+
+### Features
+
+* **agent-app:** add sandbox.persistence for workspace claims ([#24](https://github.com/chamvi/helm/issues/24)) ([18f5461](https://github.com/chamvi/helm/commit/18f5461e5669f31af47db91766d3ccf78511c4c7))
+
 ## [0.1.7](https://github.com/chamvi/helm/compare/agent-app-0.1.6...agent-app-0.1.7) (2026-11-04)
 
 
