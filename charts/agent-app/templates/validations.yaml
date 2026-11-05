@@ -1,6 +1,6 @@
 {{- include "agent-app.validateModels" . -}}
 {{- $v := .Values -}}
-{{- range $path, $value := dict "sandbox.enabled" $v.sandbox.enabled "ingress.enabled" $v.ingress.enabled "serviceAccount.create" $v.serviceAccount.create "tests.enabled" $v.tests.enabled "serviceMonitor.enabled" $v.serviceMonitor.enabled -}}
+{{- range $path, $value := dict "sandbox.enabled" $v.sandbox.enabled "sandbox.persistence.enabled" $v.sandbox.persistence.enabled "ingress.enabled" $v.ingress.enabled "serviceAccount.create" $v.serviceAccount.create "tests.enabled" $v.tests.enabled "serviceMonitor.enabled" $v.serviceMonitor.enabled -}}
 {{- if not (kindIs "bool" $value) -}}{{- fail (printf "agent-app: %s must be a boolean; use unquoted true or false." $path) -}}{{- end -}}
 {{- end -}}
 {{- if not (kindIs "slice" $v.imagePullSecrets) -}}{{- fail "agent-app: imagePullSecrets must be a list of name objects." -}}{{- end -}}

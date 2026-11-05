@@ -73,6 +73,7 @@ class ChartContract(unittest.TestCase):
             ({"replicas": 0}, "replicas"),
             ({"replicas": "2"}, "replicas"),
             ({"sandbox": {"enabled": "false"}}, "sandbox.enabled"),
+            ({"sandbox": {"enabled": True, "namespace": "sandboxes", "persistence": {"enabled": "false"}}}, "sandbox.persistence.enabled"),
             ({"ingress": {"enabled": "false", "host": "agents.example.com"}}, "ingress.enabled"),
             ({"serviceAccount": {"create": "false"}}, "serviceAccount.create"),
             ({"tests": {"enabled": "false"}}, "tests.enabled"),
