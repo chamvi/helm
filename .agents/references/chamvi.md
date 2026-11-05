@@ -1,6 +1,6 @@
 # chamvi monorepo correspondence
 
-Source: `chamvi/chamvi` tag `v0.7.1` (`376891b`, 2026-11-04), packages published on npm at 0.7.1. Verify
+Source: `chamvi/chamvi` tag `v0.7.2` (`0286c70`, 2026-11-05), packages published on npm at 0.7.2. Verify
 against the source, never against the 011 plans, whose quoted contract predates the channels rewrite.
 
 | chamvi | Path in the monorepo | Chart counterpart |
