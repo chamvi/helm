@@ -1,6 +1,6 @@
 {{- include "agent-app.validateModels" . -}}
 {{- $v := .Values -}}
-{{- range $path, $value := dict "sandbox.enabled" $v.sandbox.enabled "ingress.enabled" $v.ingress.enabled "serviceAccount.create" $v.serviceAccount.create "tests.enabled" $v.tests.enabled "serviceMonitor.enabled" $v.serviceMonitor.enabled -}}
+{{- range $path, $value := dict "sandbox.enabled" $v.sandbox.enabled "sandbox.persistence.enabled" $v.sandbox.persistence.enabled "ingress.enabled" $v.ingress.enabled "serviceAccount.create" $v.serviceAccount.create "tests.enabled" $v.tests.enabled "serviceMonitor.enabled" $v.serviceMonitor.enabled -}}
 {{- if not (kindIs "bool" $value) -}}{{- fail (printf "agent-app: %s must be a boolean; use unquoted true or false." $path) -}}{{- end -}}
 {{- end -}}
 {{- if not (kindIs "slice" $v.imagePullSecrets) -}}{{- fail "agent-app: imagePullSecrets must be a list of name objects." -}}{{- end -}}
@@ -38,7 +38,7 @@
 {{- $owned := include "agent-app.ownedEnv" . | fromJsonArray -}}
 {{- range $key, $value := $v.env -}}
 {{- if not (regexMatch "^[A-Za-z_][A-Za-z0-9_]*$" $key) -}}{{- fail (printf "agent-app: env name %q is no valid variable name; use letters, digits and underscores." $key) -}}{{- end -}}
-{{- if has $key $owned -}}{{- fail (printf "agent-app: env.%s is set by the chart (PORT, CHAMVI_BASE_PATH, CHAMVI_SCHEDULER with cronJobs, CHAMVI_SANDBOX_NAMESPACE with sandbox.enabled); use the matching value instead." $key) -}}{{- end -}}
+{{- if has $key $owned -}}{{- fail (printf "agent-app: env.%s is set by the chart (PORT, CHAMVI_BASE_PATH, CHAMVI_SCHEDULER with cronJobs, CHAMVI_SANDBOX_NAMESPACE with sandbox.enabled, CHAMVI_SANDBOX_PERSISTENCE and CHAMVI_SANDBOX_STORAGE_CLASS with sandbox.persistence); use the matching value instead." $key) -}}{{- end -}}
 {{- if not (has (kindOf $value) (list "string" "int" "int64" "float64" "float32" "bool")) -}}{{- fail (printf "agent-app: env.%s must be a scalar; use secrets for credentials." $key) -}}{{- end -}}
 {{- if contains "\u0000" (toString $value) -}}{{- fail (printf "agent-app: env.%s must not contain NUL." $key) -}}{{- end -}}
 {{- end -}}

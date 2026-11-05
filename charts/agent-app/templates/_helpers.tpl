@@ -87,6 +87,10 @@ app.kubernetes.io/managed-by: {{ .context.Release.Service | quote }}
 {{- end -}}
 {{- if .Values.cronJobs -}}{{- $names = append $names "CHAMVI_SCHEDULER" -}}{{- end -}}
 {{- if .Values.sandbox.enabled -}}{{- $names = append $names "CHAMVI_SANDBOX_NAMESPACE" -}}{{- end -}}
+{{- if and .Values.sandbox.enabled .Values.sandbox.persistence.enabled -}}
+{{- $names = append $names "CHAMVI_SANDBOX_PERSISTENCE" -}}
+{{- if .Values.sandbox.persistence.storageClassName -}}{{- $names = append $names "CHAMVI_SANDBOX_STORAGE_CLASS" -}}{{- end -}}
+{{- end -}}
 {{- toJson $names -}}
 {{- end -}}
 
@@ -135,6 +139,14 @@ app.kubernetes.io/managed-by: {{ .context.Release.Service | quote }}
 {{- if .Values.sandbox.enabled }}
 - name: CHAMVI_SANDBOX_NAMESPACE
   value: {{ .Values.sandbox.namespace | quote }}
+{{- if .Values.sandbox.persistence.enabled }}
+- name: CHAMVI_SANDBOX_PERSISTENCE
+  value: "true"
+{{- if .Values.sandbox.persistence.storageClassName }}
+- name: CHAMVI_SANDBOX_STORAGE_CLASS
+  value: {{ .Values.sandbox.persistence.storageClassName | quote }}
+{{- end }}
+{{- end }}
 {{- end }}
 {{- $derivePublicUrl := and .Values.ingress.enabled (or (not (hasKey .Values.env "CHAMVI_PUBLIC_URL")) (eq (toString .Values.env.CHAMVI_PUBLIC_URL) "")) }}
 {{- if $derivePublicUrl }}

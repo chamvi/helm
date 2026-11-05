@@ -690,11 +690,38 @@
           ],
           "title": "networkPolicy",
           "type": "object"
+        },
+        "persistence": {
+          "additionalProperties": false,
+          "description": "Per-workspace PersistentVolumeClaims (chamvi `CHAMVI_SANDBOX_PERSISTENCE`): a workspace keeps its files on its own claim, so the pod of a run waiting longer than `CHAMVI_SANDBOX_SUSPEND_AFTER_MS` (default 30 min) is deleted and rebuilt on resume. Adds `persistentvolumeclaims` create/get/list/delete to the sandbox Role.",
+          "properties": {
+            "enabled": {
+              "default": false,
+              "description": "Enable workspace claims and the suspension of waiting runs' pods.",
+              "required": [],
+              "title": "enabled",
+              "type": "boolean"
+            },
+            "storageClassName": {
+              "default": "",
+              "description": "Storage class of the claims (`CHAMVI_SANDBOX_STORAGE_CLASS`); empty uses the cluster default. A node-local class (local-path) ties a rebuilt pod to its node.",
+              "required": [],
+              "title": "storageClassName",
+              "type": "string"
+            }
+          },
+          "required": [
+            "enabled",
+            "storageClassName"
+          ],
+          "title": "persistence",
+          "type": "object"
         }
       },
       "required": [
         "enabled",
         "namespace",
+        "persistence",
         "networkPolicy"
       ],
       "title": "sandbox",
