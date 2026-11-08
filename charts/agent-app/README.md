@@ -330,6 +330,12 @@ changes. The upgrade is a code change in the application: `defineAgent()` is rem
 `defineModelAgent()` (same input, same checks) before building the new image. See
 [Upgrading to 0.7](https://chamvi.dev/guide/upgrading#upgrading-to-0-7).
 
+chamvi 0.8 replaces the store migrations with one baseline and cannot upgrade a database in place: 0.7 to 0.8 needs a
+new, empty database, and runs, agent state and conversations of the old one do not carry over. Do steps 1 and 2, point
+`DATABASE_URL` at the new database, then start only the new image and resume the CronJobs. A start, `chamvi migrate` and
+`chamvi start --check` refuse a database with the old schema, and the old database stays intact for a rollback. See
+[Upgrading to 0.8](https://chamvi.dev/guide/upgrading#upgrading-to-0-8).
+
 ## Sandbox pods
 
 With `sandbox.enabled` the app may run `@chamvi/sandbox-k8s` workspaces in `sandbox.namespace`. Select the provider in
