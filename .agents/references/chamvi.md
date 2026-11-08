@@ -30,8 +30,7 @@ against the source, never against the 011 plans, whose quoted contract predates 
 | image `ghcr.io/chamvi/node:26`: tini entrypoint, uid 1000, workdir `/app` | `images/node/Dockerfile` | `args` not `command`, the security contexts, `ci/app/Dockerfile` |
 
 Fixed: 0.2.0 double-converted string models in `installDefaultProvider`; chamvi PR #41 fixed it and 0.2.1 (published)
-ships the fix. The fixture app passes a model object, so it never depended on that fix; its `^0.2.0` range resolves to
-0.2.1.
+ships the fix. The fixture app passes a model object, so it never depended on that fix.
 
 ## First-class skills compatibility check (2026-10-30, unreleased)
 

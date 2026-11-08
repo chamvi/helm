@@ -333,10 +333,13 @@ changes. The upgrade is a code change in the application: `defineAgent()` is rem
 [Upgrading to 0.7](https://chamvi.dev/guide/upgrading#upgrading-to-0-7).
 
 chamvi 0.8 replaces the store migrations with one baseline and cannot upgrade a database in place: 0.7 to 0.8 needs a
-new, empty database, and runs, agent state and conversations of the old one do not carry over. Do steps 1 and 2, point
-`DATABASE_URL` at the new database, then start only the new image and resume the CronJobs. A start, `chamvi migrate` and
-`chamvi start --check` refuse a database with the old schema, and the old database stays intact for a rollback. See
-[Upgrading to 0.8](https://chamvi.dev/guide/upgrading#upgrading-to-0-8).
+new, empty database, and runs, agent state and conversations of the old one do not carry over. Let runs and approvals
+settle first: unsettled runs and their sandbox workspaces do not move to the new database. Do steps 1 and 2 and keep
+automation such as Flux from restarting the old image. Point `DATABASE_URL` at the new database, run `chamvi migrate`
+with the new image if `CHAMVI_MIGRATE=false`, then start only the new image and resume the CronJobs. A start,
+`chamvi migrate` and `chamvi start --check` refuse a database with the old schema. The old database stays intact for a
+rollback: restore its `DATABASE_URL` before starting 0.7, and keep the new database if you need the work done on 0.8.
+See [Upgrading to 0.8](https://chamvi.dev/guide/upgrading#upgrading-to-0-8).
 
 ## Sandbox pods
 
