@@ -204,6 +204,7 @@ changed bytes under an old pin fail verification after restart. See [approved sk
 | `CHAMVI_PROVIDER_<NAME>_API_KEY` | a provider declared by name (with `CHAMVI_PROVIDER_<NAME>_TYPE` and `_BASE_URL` in `env`); it replaces the implicit provider of the same name |
 | `CHAMVI_GIT_TOKENS` | git tokens for sandbox checkouts and pushes (`[{"host", "path"?, "username"?, "token"}]`) |
 | `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` | `githubModule()` |
+| `CHAMVI_ENCRYPTION_KEYS` | `whatsappModule()` from `@chamvi/chat-whatsapp/module`: the keyring that encrypts stored connection sessions (`<id>:<base64 32-byte key>[,...]`, the first active; keep an old id listed while rotating). Every pod of the release reads the same Secret; losing the key means pairing again |
 | `OPENCLAW_HOOKS_TOKEN` (with `OPENCLAW_BASE_URL`, `OPENCLAW_CHANNEL`, `OPENCLAW_TO`) | `openclawModule()` |
 | `AUTHUP_CLIENT_SECRET` (with `AUTHUP_URL`, `AUTHUP_CLIENT_ID`) | `authupModule()` |
 
