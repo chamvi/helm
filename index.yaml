@@ -9,6 +9,40 @@ entries:
         - name: Source
           url: https://github.com/chamvi/helm
     apiVersion: v2
+    created: "2026-11-09T08:18:15.256300452Z"
+    description: Deploys a chamvi agent app (one image running `chamvi start`), with
+      optional run-job CronJobs and the RBAC and egress policy for Kubernetes sandbox
+      pods.
+    digest: 84349e1cf2d7c02f1c94b41ff44a94daea5a5189460b33fe9776d4c564fffb00
+    home: https://chamvi.dev
+    icon: https://raw.githubusercontent.com/chamvi/chamvi/master/.github/assets/logo.svg
+    keywords:
+    - chamvi
+    - agents
+    - ai
+    - llm
+    - automation
+    kubeVersion: '>=1.30.0-0'
+    maintainers:
+    - email: contact@tada5hi.net
+      name: tada5hi
+      url: https://github.com/tada5hi
+    name: agent-app
+    sources:
+    - https://github.com/chamvi/helm
+    - https://github.com/chamvi/chamvi
+    type: application
+    urls:
+    - https://github.com/chamvi/helm/releases/download/agent-app-0.1.9/agent-app-0.1.9.tgz
+    version: 0.1.9
+  - annotations:
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Documentation
+          url: https://chamvi.dev
+        - name: Source
+          url: https://github.com/chamvi/helm
+    apiVersion: v2
     created: "2026-11-05T13:20:20.324872475Z"
     description: Deploys a chamvi agent app (one image running `chamvi start`), with
       optional run-job CronJobs and the RBAC and egress policy for Kubernetes sandbox
@@ -307,4 +341,4 @@ entries:
     urls:
     - https://github.com/chamvi/helm/releases/download/agent-app-0.1.0/agent-app-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-05T13:20:20.324899015Z"
+generated: "2026-11-09T08:18:15.25632973Z"
