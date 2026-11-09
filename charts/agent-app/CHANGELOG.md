@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9](https://github.com/chamvi/helm/compare/agent-app-0.1.8...agent-app-0.1.9) (2026-11-08)
+
+
+### Bug Fixes
+
+* **agent-app:** document the chamvi 0.8 upgrade ([#28](https://github.com/chamvi/helm/issues/28)) ([eee48ae](https://github.com/chamvi/helm/commit/eee48ae112155dc0397c25e71daa6b09e78b3af8))
+
 ## [0.1.8](https://github.com/chamvi/helm/compare/agent-app-0.1.7...agent-app-0.1.8) (2026-11-05)
 
 
