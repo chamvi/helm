@@ -1,6 +1,7 @@
 FROM node:26-trixie-slim AS deps
 WORKDIR /app
 COPY package.json ./
+ENV SCARF_ANALYTICS=false
 RUN npm install --omit=dev --no-audit --no-fund
 
 FROM ghcr.io/chamvi/node:26
