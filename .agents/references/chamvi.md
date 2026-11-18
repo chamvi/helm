@@ -1,6 +1,6 @@
 # chamvi monorepo correspondence
 
-Source: `chamvi/chamvi` tag `v0.8.0` (`51fe1b1`, 2026-11-08), packages published on npm at 0.8.0. Verify
+Source: `chamvi/chamvi` tag `v0.9.0` (`9397823`, 2026-11-18), packages published on npm at 0.9.0. Verify
 against the source, never against the 011 plans, whose quoted contract predates the channels rewrite.
 
 | chamvi | Path in the monorepo | Chart counterpart |
@@ -26,7 +26,8 @@ against the source, never against the 011 plans, whose quoted contract predates 
 | `GITHUB_APP_*`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_INSTALLATION_ID`, `GITHUB_API_URL` | `packages/github/src/module/` | README Secrets table |
 | `OPENCLAW_*` | `packages/channel-openclaw/src/module/` | README Secrets table |
 | `CHAMVI_KNOWLEDGE_MODEL` (optional, the managed collections' embedding model, read only by `knowledgeModule()`), routes `<basePath>/knowledge/collections/...` (`knowledge:read`/`knowledge:write`), since 0.5.1 (chamvi#119) | `packages/knowledge/src/module/`, `packages/knowledge/src/routes/` | README "Knowledge collections" only: plain `env` value, key through `secrets`; no template, values or schema change |
-| `CHAMVI_ENCRYPTION_KEYS` (optional, `<id>:<base64 32-byte key>[,...]`, the first active, read only when a module resolves the keyring, e.g. `whatsappModule()`), since 0.8.0 (chamvi#165, #166, #167) | `packages/app/src/keyring/` | README Secret table; passes through `secrets` (`agent-app.envFrom`), no template or values change |
+| `CHAMVI_ENCRYPTION_KEYS` (optional, `<id>:<base64 32-byte key>[,...]`, the first active, read when a module resolves the keyring, e.g. `whatsappModule()`, and since 0.9.0 once the dashboard saves a connection), since 0.8.0 (chamvi#165, #166, #167) | `packages/app/src/keyring/` | README Secret table; passes through `secrets` (`agent-app.envFrom`), no template or values change |
+| `CHAMVI_TOKENS` `permissions`: `"*"` or a list of permission bindings since 0.9.0; the old string list (`["*"]` included) fails the start | `packages/http/src/auth/static-tokens/` | README Secret table and upgrade notes; `ci/manifests/secret.yaml` uses `"*"` |
 | image `ghcr.io/chamvi/node:26`: tini entrypoint, uid 1000, workdir `/app` | `images/node/Dockerfile` | `args` not `command`, the security contexts, `ci/app/Dockerfile` |
 
 Fixed: 0.2.0 double-converted string models in `installDefaultProvider`; chamvi PR #41 fixed it and 0.2.1 (published)

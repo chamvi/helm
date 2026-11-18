@@ -45,7 +45,7 @@ class CiMatrix(unittest.TestCase):
         data = secret["stringData"]
         self.assertFalse(OBSOLETE & set(data), "obsolete variables in the CI Secret")
         tokens = json.loads(data["CHAMVI_TOKENS"])
-        self.assertTrue(tokens and all(len(t["value"]) >= 16 and t["id"] and isinstance(t["permissions"], list) for t in tokens))
+        self.assertTrue(tokens and all(len(t["value"]) >= 16 and t["id"] and (t["permissions"] == "*" or isinstance(t["permissions"], list)) for t in tokens))
         self.assertNotIn("namespace", secret["metadata"], "ct install applies it into a fresh namespace")
 
     def test_cronjob_file_mirrors_the_fixture_cron_subscription(self):
@@ -61,7 +61,7 @@ class CiMatrix(unittest.TestCase):
         package = json.loads((ROOT / "ci/app/package.json").read_text())
         deps = package["dependencies"]
         for name in ("@chamvi/app", "@chamvi/cli"):
-            self.assertTrue(deps[name].startswith("^0.8."), f"{name} must track the published 0.8 line")
+            self.assertTrue(deps[name].startswith("^0.9."), f"{name} must track the published 0.9 line")
 
 
     def test_kind_runs_calico_so_the_sandbox_policy_is_enforced(self):
