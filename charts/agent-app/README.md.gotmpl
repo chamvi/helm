@@ -206,7 +206,7 @@ changed bytes under an old pin fail verification after restart. See [approved sk
 | `CHAMVI_PROVIDER_<NAME>_API_KEY` | a provider declared by name (with `CHAMVI_PROVIDER_<NAME>_TYPE` and `_BASE_URL` in `env`); it replaces the implicit provider of the same name |
 | `CHAMVI_GIT_TOKENS` | git tokens for sandbox checkouts and pushes (`[{"host", "path"?, "username"?, "token"}]`) |
 | `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` | `githubModule()` |
-| `CHAMVI_ENCRYPTION_KEYS` | connections saved in the dashboard, and `whatsappModule()` from `@chamvi/chat-whatsapp/module`: the keyring that encrypts stored connection settings, secrets and sessions (`<id>:<base64 32-byte key>[,...]`, the first active; keep an old id listed while rotating). Every pod of the release reads the same Secret; losing the key means pairing again |
+| `CHAMVI_ENCRYPTION_KEYS` | connections saved in the dashboard (settings-only ones too), and `whatsappModule()` from `@chamvi/chat-whatsapp/module`: the keyring that encrypts stored connection secrets and sessions (settings are stored in plain text) (`<id>:<base64 32-byte key>[,...]`, the first active; keep an old id listed while rotating). Every pod of the release reads the same Secret; losing the key means pairing again |
 | `OPENCLAW_HOOKS_TOKEN` (with `OPENCLAW_BASE_URL`, `OPENCLAW_CHANNEL`, `OPENCLAW_TO`) | `openclawModule()` |
 | `AUTHUP_CLIENT_SECRET` (with `AUTHUP_URL`, `AUTHUP_CLIENT_ID`) | `authupModule()` |
 
@@ -342,7 +342,9 @@ rollback: restore its `DATABASE_URL` before starting 0.7, and keep the new datab
 See [Upgrading to 0.8](https://chamvi.dev/guide/upgrading#upgrading-to-0-8).
 
 chamvi 0.9 ships one store migration (`ConnectionsRevisionsItemBytes1794230765000`), so 0.8 to 0.9 needs the steps
-above: once it ran, an old process fails every conversation item insert. It holds an exclusive lock on the conversation
+above: once it ran, an old process fails every conversation item insert. Before step 1, let running and waiting runs
+settle: a run stored by 0.8 carries the old permission strings, which grant nothing under 0.9, so its
+permission-checked tools and dispatches are refused after it resumes, and rewriting `CHAMVI_TOKENS` does not change it. It holds an exclusive lock on the conversation
 items, runs and connections tables while it fills the byte length of every stored item (about 12 µs an item), so
 migrate before the new image serves. Rewrite `CHAMVI_TOKENS` before starting the new image: `permissions` takes `"*"`
 or a list of permission bindings, and the old string list (`["*"]` included) fails the start. Every app now serves its
