@@ -352,6 +352,13 @@ OpenAPI document at `<basePath>/openapi.json` and a Swagger UI at `<basePath>/do
 `httpModule({ openapi: false })` in the app turns both off. See
 [Upgrading to 0.9](https://chamvi.dev/guide/upgrading#upgrading-to-0-9).
 
+chamvi 0.10 ships one store migration (`LockTokens1795093873329`), so 0.9 to 0.10 needs the steps above: it adds
+the column `chamvi_locks.token` (`NOT NULL`, filled for the stored locks in the same transaction), and once it ran an
+old process fails every lock insert, so it can no longer claim runs, poll or fire schedules. No env variable, route the
+chart uses or image changes. Lock tokens start at the wall clock in microseconds: a host whose clock is behind the one
+that issued the highest token makes a fenced writer (a knowledge collection) refuse its writes until the clock catches
+up. See [Upgrading to 0.10](https://chamvi.dev/guide/upgrading#upgrading-to-0-10).
+
 ## Sandbox pods
 
 With `sandbox.enabled` the app may run `@chamvi/sandbox-k8s` workspaces in `sandbox.namespace`. Select the provider in
