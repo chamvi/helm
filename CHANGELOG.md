@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.11](https://github.com/chamvi/helm/compare/root-0.1.10...root-0.1.11) (2026-11-20)
+
+
+### Bug Fixes
+
+* **agent-app:** document the chamvi 0.10 upgrade ([#33](https://github.com/chamvi/helm/issues/33)) ([9da343f](https://github.com/chamvi/helm/commit/9da343f8d8a1a991266dd1baafd3eb8ab86d111c))
+
 ## [0.1.10](https://github.com/chamvi/helm/compare/root-0.1.9...root-0.1.10) (2026-11-18)
 
 
