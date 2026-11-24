@@ -208,7 +208,7 @@ changed bytes under an old pin fail verification after restart. See [approved sk
 | `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` | `githubModule()` |
 | `CHAMVI_ENCRYPTION_KEYS` | connections saved in the dashboard (settings-only ones too), and `whatsappModule()` from `@chamvi/chat-whatsapp/module`: the keyring that encrypts stored connection secrets and sessions (settings are stored in plain text) (`<id>:<base64 32-byte key>[,...]`, the first active; keep an old id listed while rotating). Every pod of the release reads the same Secret; losing the key means pairing again |
 | `OPENCLAW_HOOKS_TOKEN` (with `OPENCLAW_BASE_URL`, `OPENCLAW_CHANNEL`, `OPENCLAW_TO`) | `openclawModule()` |
-| `AUTHUP_CLIENT_SECRET` (with `AUTHUP_URL`, `AUTHUP_CLIENT_ID`) | `authupModule()` |
+| `AUTHUP_CLIENT_SECRET` (with `AUTHUP_URL`, `AUTHUP_CLIENT_ID`) | `authupModule()`; its plain options go in `env`: `AUTHUP_TIMEOUT_MS` (ms, default 10000) and `AUTHUP_PERMISSION_OWNER` (`realm`, the default, or `client`: the dashboard client `CHAMVI_UI_AUTHUP_CLIENT_ID` owns the `chamvi_*` permissions, for a realm shared by several deployments) |
 
 `env` holds plain, non-secret values (`CHAMVI_LOG_LEVEL`, `CHAMVI_MAX_CONCURRENT_RUNS`, `CHAMVI_MODEL`, `CHAMVI_SANDBOX_PROVIDER`, ...),
 rendered in name order after the variables the chart owns. The chart refuses an `env` entry that names one of its own:
