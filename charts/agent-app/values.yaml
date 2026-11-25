@@ -146,7 +146,7 @@ env: {}
 #   type: string
 #   minLength: 1
 # @schema
-# -- Existing Secret names, each mounted through envFrom on every pod (DATABASE_URL, CHAMVI_TOKENS, provider API keys, GITHUB_*); this chart creates no Secret.
+# -- Existing Secret names, each mounted through envFrom on every pod (DATABASE_URL, TOKENS, provider API keys, GITHUB_*); this chart creates no Secret.
 secrets: []
 
 # @schema
@@ -368,7 +368,7 @@ ingress:
 #     suspend:
 #       type: boolean
 # @schema
-# -- run-job CronJobs, one per agent `cron.on()` subscription (`name`, `schedule`, `agent`, optional `subscription` id such as `cron:0 7 * * *`, `timeZone`, `suspend`). Any entry sets `CHAMVI_SCHEDULER=false` on the Deployment, so mirror every cron subscription.
+# -- run-job CronJobs, one per agent `cron.on()` subscription (`name`, `schedule`, `agent`, optional `subscription` id such as `cron:0 7 * * *`, `timeZone`, `suspend`). Any entry sets `SCHEDULER=false` on the Deployment, so mirror every cron subscription.
 cronJobs: []
 
 # -- Defaults shared by every run-job CronJob.
@@ -407,17 +407,17 @@ cronJob:
     # @schema
     # -- Job resources; empty inherits application resources.
     resources: {}
-# -- Kubernetes sandbox pods (the chamvi sandbox-k8s provider): a Role and RoleBinding in `sandbox.namespace`, the egress policy, and `CHAMVI_SANDBOX_NAMESPACE` on the app.
+# -- Kubernetes sandbox pods (the chamvi sandbox-k8s provider): a Role and RoleBinding in `sandbox.namespace`, the egress policy, and `SANDBOX_NAMESPACE` on the app.
 sandbox:
-    # -- Grant the app's ServiceAccount the sandbox Role and mount its token. Select the provider in the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or the module option).
+    # -- Grant the app's ServiceAccount the sandbox Role and mount its token. Select the provider in the app (`env.SANDBOX_PROVIDER: kubernetes` or the module option).
     enabled: false
     # -- Namespace of the sandbox pods; must exist and differ from the release namespace.
     namespace: ''
-    # -- Per-workspace PersistentVolumeClaims (chamvi `CHAMVI_SANDBOX_PERSISTENCE`): a workspace keeps its files on its own claim, so the pod of a run waiting longer than `CHAMVI_SANDBOX_SUSPEND_AFTER_MS` (default 30 min) is deleted and rebuilt on resume. Adds `persistentvolumeclaims` create/get/list/delete to the sandbox Role.
+    # -- Per-workspace PersistentVolumeClaims (chamvi `SANDBOX_PERSISTENCE`): a workspace keeps its files on its own claim, so the pod of a run waiting longer than `SANDBOX_SUSPEND_AFTER_MS` (default 30 min) is deleted and rebuilt on resume. Adds `persistentvolumeclaims` create/get/list/delete to the sandbox Role.
     persistence:
         # -- Enable workspace claims and the suspension of waiting runs' pods.
         enabled: false
-        # -- Storage class of the claims (`CHAMVI_SANDBOX_STORAGE_CLASS`); empty uses the cluster default. A node-local class (local-path) ties a rebuilt pod to its node.
+        # -- Storage class of the claims (`SANDBOX_STORAGE_CLASS`); empty uses the cluster default. A node-local class (local-path) ties a rebuilt pod to its node.
         storageClassName: ''
     # -- Sandbox egress controls.
     networkPolicy:

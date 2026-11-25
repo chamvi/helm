@@ -77,7 +77,7 @@ class Docs(unittest.TestCase):
         self.assertEqual(pod["spec"]["terminationGracePeriodSeconds"], 120)
         self.assertEqual(container["startupProbe"]["httpGet"]["path"], "/healthz")
         env = {e["name"]: e["value"] for e in container["env"]}
-        self.assertEqual(env["CHAMVI_PUBLIC_URL"], "https://agents.example.com")
+        self.assertEqual(env["PUBLIC_URL"], "https://agents.example.com")
 
 
 

@@ -23,7 +23,7 @@ tests:
       - matchRegexRaw:
           pattern: "enforcing CNI"
       - matchRegexRaw:
-          pattern: "CHAMVI_SANDBOX_PROVIDER"
+          pattern: "SANDBOX_PROVIDER"
       - notMatchRegexRaw:
           pattern: "NOT included"
   - it: says the ServiceMonitor was skipped when its API is missing
@@ -49,6 +49,6 @@ tests:
           agent: digest
     asserts:
       - matchRegexRaw:
-          pattern: "CHAMVI_SCHEDULER=false"
+          pattern: "SCHEDULER=false"
       - matchRegexRaw:
           pattern: "cron subscription"

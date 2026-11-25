@@ -1,4 +1,4 @@
-# basePath, Ingress and the derived CHAMVI_PUBLIC_URL; the ServiceMonitor is skipped on kind (no API).
+# basePath, Ingress and the derived PUBLIC_URL; the ServiceMonitor is skipped on kind (no API).
 image:
     repository: chamvi-ci/app
     tag: ci

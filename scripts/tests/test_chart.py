@@ -54,12 +54,12 @@ class ChartContract(unittest.TestCase):
             ({"env": {"PASSWORD": {"value": "sensitive-sentinel"}}}, "env.PASSWORD"),
             ({"env": {"PASSWORD": ["sensitive-sentinel"]}}, "env.PASSWORD"),
             ({"env": {"PASSWORD": "sensitive-sentinel\x00"}}, "env.PASSWORD"),
-            ({"env": {"CHAMVI_FORCE_EXIT_MS": "sensitive-sentinel"}}, "CHAMVI_FORCE_EXIT_MS"),
-            ({"env": {"CHAMVI_FORCE_EXIT_MS": "2147483648"}}, "CHAMVI_FORCE_EXIT_MS"),
-            ({"env": {"CHAMVI_FORCE_EXIT_MS": "999999999999999999999999"}}, "CHAMVI_FORCE_EXIT_MS"),
-            ({"env": {"CHAMVI_FORCE_EXIT_MS": False}}, "CHAMVI_FORCE_EXIT_MS"),
-            ({"env": {"CHAMVI_FORCE_EXIT_MS": "115000"}}, "terminationGracePeriodSeconds"),
-            ({"env": {"CHAMVI_BASE_PATH": "/other"}}, "CHAMVI_BASE_PATH"),
+            ({"env": {"FORCE_EXIT_MS": "sensitive-sentinel"}}, "FORCE_EXIT_MS"),
+            ({"env": {"FORCE_EXIT_MS": "2147483648"}}, "FORCE_EXIT_MS"),
+            ({"env": {"FORCE_EXIT_MS": "999999999999999999999999"}}, "FORCE_EXIT_MS"),
+            ({"env": {"FORCE_EXIT_MS": False}}, "FORCE_EXIT_MS"),
+            ({"env": {"FORCE_EXIT_MS": "115000"}}, "terminationGracePeriodSeconds"),
+            ({"env": {"BASE_PATH": "/other"}}, "BASE_PATH"),
             ({"secrets": ["sensitive-sentinel/invalid"]}, "secrets"),
             ({"secrets": ["shared", "shared"]}, "secrets"),
             ({"secrets": [{"token": "sensitive-sentinel"}]}, "secrets"),
@@ -114,13 +114,13 @@ class ChartContract(unittest.TestCase):
             {"cronJobs": [{**job, "subscription": 1}]},
             {"cronJobs": [{**job, "subscription": "--entry"}]},
             {"cronJobs": [{**job, "unknown": True}]},
-            {"cronJobs": [job], "env": {"CHAMVI_SCHEDULER": "true"}},
-            {"sandbox": {"enabled": True, "namespace": "sandboxes"}, "env": {"CHAMVI_SANDBOX_NAMESPACE": "other"}},
+            {"cronJobs": [job], "env": {"SCHEDULER": "true"}},
+            {"sandbox": {"enabled": True, "namespace": "sandboxes"}, "env": {"SANDBOX_NAMESPACE": "other"}},
         ]
         for values in cases:
             with self.subTest(values=values):
                 self.assertNotEqual(render(values).returncode, 0)
-        documents(render({"env": {"CHAMVI_SCHEDULER": "false", "CHAMVI_SANDBOX_NAMESPACE": "external"}}))
+        documents(render({"env": {"SCHEDULER": "false", "SANDBOX_NAMESPACE": "external"}}))
 
     def test_scalar_names_and_env_are_strings_and_unique(self):
         docs = documents(render({
@@ -136,7 +136,7 @@ class ChartContract(unittest.TestCase):
         env = container["env"]
         self.assertEqual(len(env), len({entry["name"] for entry in env}))
         self.assertEqual({entry["name"]: entry["value"] for entry in env}, {
-            "PORT": "3000", "CHAMVI_BASE_PATH": "", "BOOL": "false", "ZERO": "0", "NUMBER": "1.25", "TEXT": "on", "MULTILINE": "a\nb",
+            "PORT": "3000", "BASE_PATH": "", "BOOL": "false", "ZERO": "0", "NUMBER": "1.25", "TEXT": "on", "MULTILINE": "a\nb",
         })
         self.assertEqual(container["envFrom"], [{"secretRef": {"name": "123"}}])
 
@@ -144,11 +144,11 @@ class ChartContract(unittest.TestCase):
         docs = documents(render({
             "basePath": "/agents",
             "ingress": {"enabled": True, "host": "agents.example.com"},
-            "env": {"CHAMVI_PUBLIC_URL": ""},
+            "env": {"PUBLIC_URL": ""},
         }))
         env = next(d for d in docs if d["kind"] == "Deployment")["spec"]["template"]["spec"]["containers"][0]["env"]
-        self.assertEqual([entry for entry in env if entry["name"] == "CHAMVI_PUBLIC_URL"], [
-            {"name": "CHAMVI_PUBLIC_URL", "value": "http://agents.example.com"},
+        self.assertEqual([entry for entry in env if entry["name"] == "PUBLIC_URL"], [
+            {"name": "PUBLIC_URL", "value": "http://agents.example.com"},
         ])
 
     def test_names_and_job_arguments_survive_long_inputs(self):
