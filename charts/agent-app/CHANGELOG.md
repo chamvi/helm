@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/chamvi/helm/compare/agent-app-0.1.12...agent-app-0.2.0) (2026-11-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **agent-app:** adopt the chamvi 0.12 env variable names ([#38](https://github.com/chamvi/helm/issues/38))
+
+### Bug Fixes
+
+* **agent-app:** adopt the chamvi 0.12 env variable names ([#38](https://github.com/chamvi/helm/issues/38)) ([79140e9](https://github.com/chamvi/helm/commit/79140e9ad6b6a9d5f6cb902cabc188a76f2e47bc))
+
 ## [0.1.12](https://github.com/chamvi/helm/compare/agent-app-0.1.11...agent-app-0.1.12) (2026-11-25)
 
 
