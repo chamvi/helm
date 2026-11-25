@@ -26,7 +26,7 @@ providers:
                     secretKeyRef: { name: model-credentials, key: authorization }
 ```
 
-API keys and credential headers are Secret references only. Provider keys may also come from `secrets` (envFrom), so a provider need not declare `apiKey`. An `openai-compatible` provider requires `baseURL` and its SDK provider package in the application image. `model` renders `CHAMVI_MODEL`; provider names and header names map to upper-case env segments with hyphens replaced by underscores. Explicit chart-generated names cannot also appear in `env`.
+API keys and credential headers are Secret references only. Provider keys may also come from `secrets` (envFrom), so a provider need not declare `apiKey`. An `openai-compatible` provider requires `baseURL` and its SDK provider package in the application image. `model` renders `MODEL`; provider names and header names map to upper-case env segments with hyphens replaced by underscores. Explicit chart-generated names cannot also appear in `env`.
 
 No config-file volume or remote-agent configuration is created. Use the existing generic env and Secret mechanisms for advanced app settings. The readiness test hook receives none of these model credentials.
 
@@ -102,8 +102,8 @@ The image is the agent repository's own (stage 2 `FROM ghcr.io/chamvi/node:26`, 
 `ENTRYPOINT ["/usr/bin/tini", "--"]`). The value `command` renders into the container **args**, never `command:`,
 so tini stays PID 1: the Deployment runs `command + ["start"]`, each CronJob `command + ["run-job", agent, subscription]`.
 The CLI loads `dist/index.mjs`, or, without an entry, builds the default app from the `agents/` folder
-(`CHAMVI_AGENTS_DIR`, relative to `/app`). Since chamvi 0.5.1 an app can also load agents from npm packages by name
-(`createApp({ agents })`, `chamvi.json` or `env.CHAMVI_AGENTS`, comma-separated); such a package must be installed in
+(`AGENTS_DIR`, relative to `/app`). Since chamvi 0.5.1 an app can also load agents from npm packages by name
+(`createApp({ agents })`, `chamvi.json` or `env.AGENTS`, comma-separated); such a package must be installed in
 the image's `node_modules`, and a version bump of it cancels its agents' unsettled runs on the next start. Either way
 the agents ship inside the image.
 
@@ -199,39 +199,39 @@ changed bytes under an old pin fail verification after restart. See [approved sk
 | Variable | When |
 |---|---|
 | `DATABASE_URL` | a shared PostgreSQL store: more than one replica, any `cronJobs`, runs that survive a restart |
-| `CHAMVI_TOKENS` | static API tokens (`[{"value", "id", "permissions"}]`, `permissions` either `"*"` or a list of permission bindings), unless another authenticator is configured |
-| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY`, `XAI_API_KEY` | an agent's `'<provider>/<model>'` model string (or the default `CHAMVI_MODEL`) names that implicit provider |
-| `CHAMVI_PROVIDER_<NAME>_API_KEY` | a provider declared by name (with `CHAMVI_PROVIDER_<NAME>_TYPE` and `_BASE_URL` in `env`); it replaces the implicit provider of the same name |
-| `CHAMVI_GIT_TOKENS` | git tokens for sandbox checkouts and pushes (`[{"host", "path"?, "username"?, "token"}]`) |
+| `TOKENS` | static API tokens (`[{"value", "id", "permissions"}]`, `permissions` either `"*"` or a list of permission bindings), unless another authenticator is configured |
+| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `MISTRAL_API_KEY`, `XAI_API_KEY` | an agent's `'<provider>/<model>'` model string (or the default `MODEL`) names that implicit provider |
+| `PROVIDER_<NAME>_API_KEY` | a provider declared by name (with `PROVIDER_<NAME>_TYPE` and `_BASE_URL` in `env`); it replaces the implicit provider of the same name |
+| `SANDBOX_GIT_TOKENS` | git tokens for sandbox checkouts and pushes (`[{"host", "path"?, "username"?, "token"}]`) |
 | `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` | `githubModule()` |
-| `CHAMVI_ENCRYPTION_KEYS` | connections saved in the dashboard (settings-only ones too), and `whatsappModule()` from `@chamvi/chat-whatsapp/module`: the keyring that encrypts stored connection secrets and sessions (settings are stored in plain text) (`<id>:<base64 32-byte key>[,...]`, the first active; keep an old id listed while rotating). Every pod of the release reads the same Secret; losing the key means pairing again |
+| `ENCRYPTION_KEYS` | connections saved in the dashboard (settings-only ones too), and `whatsappModule()` from `@chamvi/chat-whatsapp/module`: the keyring that encrypts stored connection secrets and sessions (settings are stored in plain text) (`<id>:<base64 32-byte key>[,...]`, the first active; keep an old id listed while rotating). Every pod of the release reads the same Secret; losing the key means pairing again |
 | `OPENCLAW_HOOKS_TOKEN` (with `OPENCLAW_BASE_URL`, `OPENCLAW_CHANNEL`, `OPENCLAW_TO`) | `openclawModule()` |
-| `AUTHUP_CLIENT_SECRET` (with `AUTHUP_URL`) | `authupModule()`; its plain options go in `env`: `AUTHUP_CLIENT_ID` (default `chamvi-server`), `AUTHUP_REALM` (the realm of chamvi's authup clients, default `master`), `AUTHUP_TIMEOUT_MS` (ms, default 10000) and `AUTHUP_PERMISSION_OWNER` (`realm`, the default, or `client`: the dashboard client owns the `chamvi_*` permissions, for a realm shared by several deployments). With `AUTHUP_URL` set the dashboard offers the authup login as the public client `CHAMVI_UI_AUTHUP_CLIENT_ID` (default `chamvi`) |
+| `AUTHUP_CLIENT_SECRET` (with `AUTHUP_URL`) | `authupModule()`; its plain options go in `env`: `AUTHUP_CLIENT_ID` (default `chamvi-server`), `AUTHUP_REALM` (the realm of chamvi's authup clients, default `master`), `AUTHUP_TIMEOUT_MS` (ms, default 10000) and `AUTHUP_PERMISSION_OWNER` (`realm`, the default, or `client`: the dashboard client owns the `chamvi_*` permissions, for a realm shared by several deployments). With `AUTHUP_URL` set the dashboard offers the authup login as the public client `UI_AUTHUP_CLIENT_ID` (default `chamvi`) |
 
-`env` holds plain, non-secret values (`CHAMVI_LOG_LEVEL`, `CHAMVI_MAX_CONCURRENT_RUNS`, `CHAMVI_MODEL`, `CHAMVI_SANDBOX_PROVIDER`, ...),
+`env` holds plain, non-secret values (`LOG_LEVEL`, `MAX_CONCURRENT_RUNS`, `MODEL`, `SANDBOX_PROVIDER`, ...),
 rendered in name order after the variables the chart owns. The chart refuses an `env` entry that names one of its own:
 
 | Variable | Value | When |
 |---|---|---|
 | `PORT` | `3000` | always |
-| `CHAMVI_BASE_PATH` | `basePath` | always |
-| `CHAMVI_SCHEDULER` | `false` | `cronJobs` is not empty |
-| `CHAMVI_SANDBOX_NAMESPACE` | `sandbox.namespace` | `sandbox.enabled` |
-| `CHAMVI_PUBLIC_URL` | `https://<ingress.host>` with `tls.secretName`, else `http://<ingress.host>` | `ingress.enabled` and no `env.CHAMVI_PUBLIC_URL` (yours wins) |
-| `CHAMVI_DEPLOYMENT` | the release's full name (`<release>-agent-app`, or `fullnameOverride`) | `sandbox.enabled` and no `env.CHAMVI_DEPLOYMENT` (yours wins) |
+| `BASE_PATH` | `basePath` | always |
+| `SCHEDULER` | `false` | `cronJobs` is not empty |
+| `SANDBOX_NAMESPACE` | `sandbox.namespace` | `sandbox.enabled` |
+| `PUBLIC_URL` | `https://<ingress.host>` with `tls.secretName`, else `http://<ingress.host>` | `ingress.enabled` and no `env.PUBLIC_URL` (yours wins) |
+| `DEPLOYMENT` | the release's full name (`<release>-agent-app`, or `fullnameOverride`) | `sandbox.enabled` and no `env.DEPLOYMENT` (yours wins) |
 
 The app listens on `HOST` `0.0.0.0` (IPv4 only). On an IPv6-only cluster (EKS IPv6 mode) set `env.HOST: "::"`, which
 listens dual-stack where the node kernel has IPv6; the chart refuses any other `HOST`, since the kubelet probes the pod
 address.
 
-The derived `CHAMVI_PUBLIC_URL` is the origin only: the app appends `basePath` once when it builds approval links
+The derived `PUBLIC_URL` is the origin only: the app appends `basePath` once when it builds approval links
 (`<origin><basePath>/ui/approvals?run=<id>&approval=<id>`, ids only, never a credential). When TLS terminates outside
-the Ingress (a load balancer, a default certificate), set `env.CHAMVI_PUBLIC_URL` to the `https://` origin.
+the Ingress (a load balancer, a default certificate), set `env.PUBLIC_URL` to the `https://` origin.
 
 ### Knowledge collections (optional)
 
 Requires chamvi 0.5.1 or newer (managed knowledge collections) and `knowledgeModule()` from
-`@chamvi/knowledge/module` in the app. Managed collections embed with `env.CHAMVI_KNOWLEDGE_MODEL`
+`@chamvi/knowledge/module` in the app. Managed collections embed with `env.KNOWLEDGE_MODEL`
 (`'<provider>/<model id>'`, for example `openai/text-embedding-3-small`), which wins over
 `knowledgeModule({ embeddingModel })`; its provider key comes through `secrets` like any model key. Without either,
 creating a managed collection answers 409; declared collections are unaffected. The module serves
@@ -268,9 +268,9 @@ probes:
 
 On termination the pod sleeps `preStopSleepSeconds` (5, the native `sleep` action) so the endpoints drop it, then the
 CLI gets SIGTERM: readiness 503, channels stopped, HTTP closed, runs drained (30 s), the store closed. The CLI exits
-by force `CHAMVI_FORCE_EXIT_MS` (90 s) after the signal and the kubelet kills at `terminationGracePeriodSeconds` (120).
-The chart refuses a render where `preStopSleepSeconds * 1000 + CHAMVI_FORCE_EXIT_MS >= terminationGracePeriodSeconds * 1000`.
-It reads `env.CHAMVI_FORCE_EXIT_MS` only: a value set through a Secret escapes the check.
+by force `FORCE_EXIT_MS` (90 s) after the signal and the kubelet kills at `terminationGracePeriodSeconds` (120).
+The chart refuses a render where `preStopSleepSeconds * 1000 + FORCE_EXIT_MS >= terminationGracePeriodSeconds * 1000`.
+It reads `env.FORCE_EXIT_MS` only: a value set through a Secret escapes the check.
 Skill preparation owns its clone/cleanup work; cancellation can wait for clone settlement before drain.
 The CLI force-exit and pod grace period remain the operator bounds, so allow for this work when sizing them.
 
@@ -287,7 +287,7 @@ cronJobs:
 
 Each entry fires one `cron.on()` subscription of an agent through `chamvi run-job <agent> [subscription]`. The
 `subscription` id defaults to `cron:<expression>` (spaces included; it stays one argv element) and may be left out for
-an agent with exactly one cron subscription. Any entry sets `CHAMVI_SCHEDULER=false` on the Deployment, whose cron
+an agent with exactly one cron subscription. Any entry sets `SCHEDULER=false` on the Deployment, whose cron
 channel then validates but never fires, so give **every** cron subscription an entry with the same schedule.
 The Jobs need the Deployment's store: put a PostgreSQL `DATABASE_URL` in a Secret.
 
@@ -304,14 +304,14 @@ not affected.
 ### Upgrading chamvi with CronJobs
 
 A minor chamvi upgrade that migrates the store (0.3 to 0.4) needs downtime, and the Deployment's `Recreate` strategy
-does not cover CronJobs: `CHAMVI_MIGRATE` defaults to `true` in job mode too, so an old Job pod started mid-upgrade
+does not cover CronJobs: `MIGRATE` defaults to `true` in job mode too, so an old Job pod started mid-upgrade
 writes runs the new version's one-time backfill never sees. Old and new processes must never share the store:
 
 1. Suspend every CronJob (`suspend: true` on each `cronJobs[]` entry, or
    `kubectl patch cronjob <name> -p '{"spec":{"suspend":true}}'`) and wait for running Job pods to finish.
 2. Scale the Deployment to 0 and wait for its pods to exit; draining executions alone is not enough.
 3. Migrate once with the new image (`chamvi migrate` with `DATABASE_URL`), or let the new Deployment migrate on start
-   with the default `CHAMVI_MIGRATE=true`.
+   with the default `MIGRATE=true`.
 4. Start only the new image, then resume the CronJobs with it.
 
 See [Upgrading to 0.4](https://chamvi.dev/guide/upgrading#upgrading-to-0-4).
@@ -366,21 +366,30 @@ already use lower case), and `AUTHUP_CLIENT_ID` defaults to `chamvi-server` with
 pinned `ioredis` in `overrides` can drop it. See
 [Upgrading to 0.11](https://chamvi.dev/guide/upgrading#upgrading-to-0-11).
 
+chamvi 0.12 ships no store migration, but renames its env variables: chamvi's own settings drop the `CHAMVI_` prefix
+(`CHAMVI_MODEL` is `MODEL`, `CHAMVI_TOKENS` is `TOKENS`, `CHAMVI_MAIL_*` is `MAIL_*`, `CHAMVI_SANDBOX_*` is
+`SANDBOX_*`, ...), `CHAMVI_GIT_TOKENS` is `SANDBOX_GIT_TOKENS` and `CHAMVI_UI_AUTHUP_REALM_ID` is `UI_AUTHUP_REALM`;
+`AUTHUP_*`, the default `GITHUB_*` and `OPENCLAW_*` keep their names. An old name is ignored, not refused, so rename
+every key under `env` and in your Secrets together with the chart upgrade. This chart version sets the new names it
+owns (`BASE_PATH`, `SCHEDULER`, `PUBLIC_URL`, `DEPLOYMENT`, `SANDBOX_*`, `MODEL`, `PROVIDER_*`) and needs chamvi 0.12:
+with 0.11 the app no longer sees `SCHEDULER=false`, and in CronJob mode the Deployment would fire every schedule a
+second time. See [Upgrading to 0.12](https://chamvi.dev/guide/upgrading#upgrading-to-0-12).
+
 ## Sandbox pods
 
 With `sandbox.enabled` the app may run `@chamvi/sandbox-k8s` workspaces in `sandbox.namespace`. Select the provider in
-the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or `sandboxModule({ provider: 'kubernetes' })`); the chart sets
-`CHAMVI_SANDBOX_NAMESPACE`.
+the app (`env.SANDBOX_PROVIDER: kubernetes` or `sandboxModule({ provider: 'kubernetes' })`); the chart sets
+`SANDBOX_NAMESPACE`.
 
-- Sandbox env for `env`: `CHAMVI_SANDBOX_IMAGE` (default `ghcr.io/chamvi/sandbox-dev:trixie`; `sandbox-node` is
-  deprecated, pin a digest in production), `CHAMVI_SANDBOX_IMAGES` (the images the model may pick, a comma list),
-  `CHAMVI_GIT_TOKENS` (in a Secret). Since chamvi 0.4 a set `CHAMVI_GIT_CREDENTIAL_MODE` is refused at startup:
+- Sandbox env for `env`: `SANDBOX_IMAGE` (default `ghcr.io/chamvi/sandbox-dev:trixie`; `sandbox-node` is
+  deprecated, pin a digest in production), `SANDBOX_IMAGES` (the images the model may pick, a comma list),
+  `SANDBOX_GIT_TOKENS` (in a Secret). Since chamvi 0.4 a set `CHAMVI_GIT_CREDENTIAL_MODE` is refused at startup:
   remove it from `env`.
-- The chart sets `CHAMVI_DEPLOYMENT` (the workspaces' `chamvi.dev/deployment` label) to the release's full name, so
+- The chart sets `DEPLOYMENT` (the workspaces' `chamvi.dev/deployment` label) to the release's full name, so
   releases sharing a sandbox namespace never see each other's workspaces, and the app removes workspaces of runs its
   store no longer knows (under chamvi's `default` they wait for their 7 day lifetime). Workspaces created under another
   value (`default`, before the chart set it) are no longer found by the app: a waiting run gets a fresh workspace, and the old
-  pods stop at their deadline. Set `env.CHAMVI_DEPLOYMENT` to keep a value, e.g. `default` across this upgrade.
+  pods stop at their deadline. Set `env.DEPLOYMENT` to keep a value, e.g. `default` across this upgrade.
 - Create the namespace first, apart from the release namespace (the chart refuses the same one), and label it for
   Pod Security `baseline`: since chamvi 027 workspace pods run as root with a writable root filesystem and a few added
   capabilities, so `apt` and toolchain installs work. The provider's `user` and `readOnlyRoot` options restore a pod
@@ -438,7 +447,7 @@ Kubernetes: `>=1.30.0-0`
 | cronJob.resources | object | `{}` | Job resources; empty inherits application resources. |
 | cronJob.startingDeadlineSeconds | int | `300` | Deadline for starting a missed schedule. |
 | cronJob.successfulJobsHistoryLimit | int | `3` | Completed Jobs retained. |
-| cronJobs | list | `[]` | run-job CronJobs, one per agent `cron.on()` subscription (`name`, `schedule`, `agent`, optional `subscription` id such as `cron:0 7 * * *`, `timeZone`, `suspend`). Any entry sets `CHAMVI_SCHEDULER=false` on the Deployment, so mirror every cron subscription. |
+| cronJobs | list | `[]` | run-job CronJobs, one per agent `cron.on()` subscription (`name`, `schedule`, `agent`, optional `subscription` id such as `cron:0 7 * * *`, `timeZone`, `suspend`). Any entry sets `SCHEDULER=false` on the Deployment, so mirror every cron subscription. |
 | env | object | `{}` | Plain environment values, never credentials; use secrets for sensitive values. |
 | fullnameOverride | string | `""` | Override the resource name (DNS label starting with a letter, at most 63 characters). |
 | global | object | `{}` | Free-form umbrella chart values. |
@@ -477,8 +486,8 @@ Kubernetes: `>=1.30.0-0`
 | providers | object | `{}` | Named model providers. API keys use {secretName, key}; headers use {value} or {valueFrom: {secretKeyRef: {name, key}}}. |
 | replicas | int | `1` | Application replicas; more than one requires a shared database. |
 | resources | object | `{}` | Application resource requests and limits. |
-| sandbox | object | `{"enabled":false,"namespace":"","networkPolicy":{"cilium":{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org","deb.debian.org","mise.jdx.dev","mise-versions.jdx.dev","nodejs.org"]},"clusterCIDRs":["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"],"clusterCIDRsIPv6":["fc00::/7","fe80::/10"],"dns":{"ipBlocks":[],"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}},"enabled":true,"ports":[443,80]},"persistence":{"enabled":false,"storageClassName":""}}` | Kubernetes sandbox pods (the chamvi sandbox-k8s provider): a Role and RoleBinding in `sandbox.namespace`, the egress policy, and `CHAMVI_SANDBOX_NAMESPACE` on the app. |
-| sandbox.enabled | bool | `false` | Grant the app's ServiceAccount the sandbox Role and mount its token. Select the provider in the app (`env.CHAMVI_SANDBOX_PROVIDER: kubernetes` or the module option). |
+| sandbox | object | `{"enabled":false,"namespace":"","networkPolicy":{"cilium":{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org","deb.debian.org","mise.jdx.dev","mise-versions.jdx.dev","nodejs.org"]},"clusterCIDRs":["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"],"clusterCIDRsIPv6":["fc00::/7","fe80::/10"],"dns":{"ipBlocks":[],"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}},"enabled":true,"ports":[443,80]},"persistence":{"enabled":false,"storageClassName":""}}` | Kubernetes sandbox pods (the chamvi sandbox-k8s provider): a Role and RoleBinding in `sandbox.namespace`, the egress policy, and `SANDBOX_NAMESPACE` on the app. |
+| sandbox.enabled | bool | `false` | Grant the app's ServiceAccount the sandbox Role and mount its token. Select the provider in the app (`env.SANDBOX_PROVIDER: kubernetes` or the module option). |
 | sandbox.namespace | string | `""` | Namespace of the sandbox pods; must exist and differ from the release namespace. |
 | sandbox.networkPolicy | object | `{"cilium":{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org","deb.debian.org","mise.jdx.dev","mise-versions.jdx.dev","nodejs.org"]},"clusterCIDRs":["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","100.64.0.0/10"],"clusterCIDRsIPv6":["fc00::/7","fe80::/10"],"dns":{"ipBlocks":[],"namespaceSelector":{"kubernetes.io/metadata.name":"kube-system"},"podSelector":{"k8s-app":"kube-dns"}},"enabled":true,"ports":[443,80]}` | Sandbox egress controls. |
 | sandbox.networkPolicy.cilium | object | `{"enabled":false,"fqdns":["github.com","*.github.com","*.githubusercontent.com","registry.npmjs.org","deb.debian.org","mise.jdx.dev","mise-versions.jdx.dev","nodejs.org"]}` | Optional Cilium replacement policy. |
@@ -492,10 +501,10 @@ Kubernetes: `>=1.30.0-0`
 | sandbox.networkPolicy.dns.podSelector | object | `{"k8s-app":"kube-dns"}` | DNS pod labels. |
 | sandbox.networkPolicy.enabled | bool | `true` | Create sandbox policy resources when sandbox is enabled. |
 | sandbox.networkPolicy.ports | list | `[443,80]` | TCP ports sandboxes may reach on public addresses (portable policy) or on `cilium.fqdns` (Cilium). 80 is for Debian's apt sources, which are plain HTTP (apt checks signatures). |
-| sandbox.persistence | object | `{"enabled":false,"storageClassName":""}` | Per-workspace PersistentVolumeClaims (chamvi `CHAMVI_SANDBOX_PERSISTENCE`): a workspace keeps its files on its own claim, so the pod of a run waiting longer than `CHAMVI_SANDBOX_SUSPEND_AFTER_MS` (default 30 min) is deleted and rebuilt on resume. Adds `persistentvolumeclaims` create/get/list/delete to the sandbox Role. |
+| sandbox.persistence | object | `{"enabled":false,"storageClassName":""}` | Per-workspace PersistentVolumeClaims (chamvi `SANDBOX_PERSISTENCE`): a workspace keeps its files on its own claim, so the pod of a run waiting longer than `SANDBOX_SUSPEND_AFTER_MS` (default 30 min) is deleted and rebuilt on resume. Adds `persistentvolumeclaims` create/get/list/delete to the sandbox Role. |
 | sandbox.persistence.enabled | bool | `false` | Enable workspace claims and the suspension of waiting runs' pods. |
-| sandbox.persistence.storageClassName | string | `""` | Storage class of the claims (`CHAMVI_SANDBOX_STORAGE_CLASS`); empty uses the cluster default. A node-local class (local-path) ties a rebuilt pod to its node. |
-| secrets | list | `[]` | Existing Secret names, each mounted through envFrom on every pod (DATABASE_URL, CHAMVI_TOKENS, provider API keys, GITHUB_*); this chart creates no Secret. |
+| sandbox.persistence.storageClassName | string | `""` | Storage class of the claims (`SANDBOX_STORAGE_CLASS`); empty uses the cluster default. A node-local class (local-path) ties a rebuilt pod to its node. |
+| secrets | list | `[]` | Existing Secret names, each mounted through envFrom on every pod (DATABASE_URL, TOKENS, provider API keys, GITHUB_*); this chart creates no Secret. |
 | service | object | `{"annotations":{},"port":80,"type":"ClusterIP"}` | Application Service settings. |
 | service.annotations | object | `{}` | Service annotations. |
 | service.port | int | `80` | Service port, targeting the named http container port. |

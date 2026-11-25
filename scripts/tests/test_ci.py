@@ -44,7 +44,7 @@ class CiMatrix(unittest.TestCase):
         secret = manifest_secrets()["agent-app-ci"]
         data = secret["stringData"]
         self.assertFalse(OBSOLETE & set(data), "obsolete variables in the CI Secret")
-        tokens = json.loads(data["CHAMVI_TOKENS"])
+        tokens = json.loads(data["TOKENS"])
         self.assertTrue(tokens and all(len(t["value"]) >= 16 and t["id"] and (t["permissions"] == "*" or (isinstance(t["permissions"], list) and all(isinstance(b, dict) and isinstance(b.get("permission"), dict) and b["permission"].get("name") for b in t["permissions"]))) for t in tokens))
         self.assertNotIn("namespace", secret["metadata"], "ct install applies it into a fresh namespace")
 

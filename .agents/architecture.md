@@ -9,21 +9,21 @@ The rules below are load-bearing. Each has a helm-unittest suite or a contract t
    the container `args`, so the image's `ENTRYPOINT ["/usr/bin/tini", "--"]` stays PID 1. Deployment args
    `command + [start]`, CronJob args `command + [run-job, <agent>, <subscription>?]`, the helm test pod
    `[node, -e, <fetch of /readyz>]`. No shell in any rendered command.
-2. **Owned env names.** The chart renders `PORT=3000`, `CHAMVI_BASE_PATH`, `CHAMVI_SCHEDULER=false` (with `cronJobs`),
-   `CHAMVI_SANDBOX_NAMESPACE` (with `sandbox.enabled`) and refuses an `env` entry naming one of them.
-   `CHAMVI_PUBLIC_URL` is derived from the Ingress (`https://<host>` with `tls.secretName`, else `http://<host>`) only
-   when `env.CHAMVI_PUBLIC_URL` is unset or empty; it is the origin only, since the app's `approvalUrlOf()` appends
-   `CHAMVI_BASE_PATH` itself. `CHAMVI_DEPLOYMENT` is the release's full name with `sandbox.enabled`, unless
-   `env.CHAMVI_DEPLOYMENT` is set and non-empty. `env` follows in sorted key order, values as strings.
+2. **Owned env names.** The chart renders `PORT=3000`, `BASE_PATH`, `SCHEDULER=false` (with `cronJobs`),
+   `SANDBOX_NAMESPACE` (with `sandbox.enabled`) and refuses an `env` entry naming one of them.
+   `PUBLIC_URL` is derived from the Ingress (`https://<host>` with `tls.secretName`, else `http://<host>`) only
+   when `env.PUBLIC_URL` is unset or empty; it is the origin only, since the app's `approvalUrlOf()` appends
+   `BASE_PATH` itself. `DEPLOYMENT` is the release's full name with `sandbox.enabled`, unless
+   `env.DEPLOYMENT` is set and non-empty. `env` follows in sorted key order, values as strings.
 3. **Shutdown budget.** preStop `sleep.seconds: 5`, `terminationGracePeriodSeconds: 120`, the CLI's force exit 90 s.
-   The render fails unless `preStopSleepSeconds * 1000 + CHAMVI_FORCE_EXIT_MS < terminationGracePeriodSeconds * 1000`
-   (only `env.CHAMVI_FORCE_EXIT_MS` is visible to Helm). Probes: startup `<basePath>/healthz` 2 s x 60, liveness
+   The render fails unless `preStopSleepSeconds * 1000 + FORCE_EXIT_MS < terminationGracePeriodSeconds * 1000`
+   (only `env.FORCE_EXIT_MS` is visible to Helm). Probes: startup `<basePath>/healthz` 2 s x 60, liveness
    `<basePath>/healthz` 10 s x 3, readiness `<basePath>/readyz` 5 s x 2, all on the named port `http`.
 4. **basePath.** Empty or `^(/[a-z0-9._~-]+)+$`, the app's `BASE_PATH_PATTERN` (lower case, routup matches paths
    case-insensitively), so every value the chart accepts is one the app starts with.
 5. **CronJobs.** `concurrencyPolicy: Forbid`, `restartPolicy: Never`, `backoffLimit: 0`: a retried Job fires at a new
    time and gets a new `<subscription>@<scheduledAt>` idempotency key, i.e. a duplicate run. Any entry sets
-   `CHAMVI_SCHEDULER=false` on the Deployment (its cron channel validates but never fires), so every cron subscription
+   `SCHEDULER=false` on the Deployment (its cron channel validates but never fires), so every cron subscription
    needs an entry. `subscription` is one argv element (spaces included) and may not start with `-`.
 6. **Egress union rule.** NetworkPolicies are allow-lists whose union applies. With `sandbox.networkPolicy.cilium.enabled`
    the portable NetworkPolicy (`networkPolicy.ports`, 443 and 80, to every public address) must not render, or the FQDN list restricts nothing.

@@ -18,7 +18,7 @@ class FixtureContract(unittest.TestCase):
         args = ["node", "node_modules/@chamvi/cli/dist/cli.mjs", "run-job", job["agent"], job["subscription"]]
         result = subprocess.run(
             ["docker", "run", "--rm", "--read-only", "--tmpfs", "/tmp", "-u", "1000:1000",
-             "-e", "CHAMVI_LOG_LEVEL=error", IMAGE, *args],
+             "-e", "LOG_LEVEL=error", IMAGE, *args],
             capture_output=True, text=True, timeout=120,
         )
         self.assertEqual(result.returncode, 0, result.stderr)

@@ -24,18 +24,18 @@ tests:
           path: spec.rules[0].http.paths[0]
           value: { path: /agents, pathType: Prefix, backend: { service: { name: demo-agent-app, port: { name: http } } } }
       - equal: { path: spec.tls, value: [{ hosts: [agents.example.com], secretName: agents-tls }] }
-  - it: derives CHAMVI_PUBLIC_URL from the ingress
+  - it: derives PUBLIC_URL from the ingress
     set:
       basePath: /agents
       ingress: { enabled: true, host: agents.example.com, tls: { secretName: agents-tls } }
     template: templates/deployment.yaml
     asserts:
-      - contains: { path: 'spec.template.spec.containers[0].env', content: { name: CHAMVI_PUBLIC_URL, value: "https://agents.example.com" } }
-  - it: keeps an explicit CHAMVI_PUBLIC_URL once
+      - contains: { path: 'spec.template.spec.containers[0].env', content: { name: PUBLIC_URL, value: "https://agents.example.com" } }
+  - it: keeps an explicit PUBLIC_URL once
     set:
       ingress: { enabled: true, host: agents.example.com }
-      env: { CHAMVI_PUBLIC_URL: "https://agents.acme.dev" }
+      env: { PUBLIC_URL: "https://agents.acme.dev" }
     template: templates/deployment.yaml
     asserts:
-      - contains: { path: 'spec.template.spec.containers[0].env', content: { name: CHAMVI_PUBLIC_URL, value: "https://agents.acme.dev" } }
-      - notContains: { path: 'spec.template.spec.containers[0].env', content: { name: CHAMVI_PUBLIC_URL, value: "http://agents.example.com" } }
+      - contains: { path: 'spec.template.spec.containers[0].env', content: { name: PUBLIC_URL, value: "https://agents.acme.dev" } }
+      - notContains: { path: 'spec.template.spec.containers[0].env', content: { name: PUBLIC_URL, value: "http://agents.example.com" } }

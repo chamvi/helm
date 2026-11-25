@@ -27,14 +27,14 @@ class Models(unittest.TestCase):
             {"providers": {"team": {"type": "anthropic", "headers": {"authorization": "secret-sentinel"}}}},
             {"providers": {"team": {"type": "anthropic", "apiKey": {"secretName": "valid", "key": ""}}}},
             {"providers": {"team": {"type": "anthropic", "headers": {"x-team": {"value": "plain", "valueFrom": {"secretKeyRef": {"name": "valid", "key": "key"}}}}}}},
-            {"providers": {"team": {"type": "anthropic"}}, "env": {"CHAMVI_PROVIDER_TEAM_TYPE": "secret-sentinel"}},
-            {"providers": {"team": {"type": "anthropic", "headers": {"x-team": {"value": "plain"}}}}, "env": {"CHAMVI_PROVIDER_TEAM_HEADER_X_TEAM": "secret-sentinel"}},
+            {"providers": {"team": {"type": "anthropic"}}, "env": {"PROVIDER_TEAM_TYPE": "secret-sentinel"}},
+            {"providers": {"team": {"type": "anthropic", "headers": {"x-team": {"value": "plain"}}}}, "env": {"PROVIDER_TEAM_HEADER_X_TEAM": "secret-sentinel"}},
             {"providers": {"team": {"type": "unknown"}}},
             {"providers": {"team": {"type": "openai-compatible"}}},
             {"providers": {"team": {"type": "anthropic", "apiKey": "secret-sentinel"}}},
             {"providers": {"team": {"type": "anthropic", "baseURL": "https://secret-sentinel@example.com"}}},
             {"providers": {"team": {"type": "anthropic", "headers": {"authorization": {"value": "secret-sentinel"}}}}},
-            {"model": "team/id", "env": {"CHAMVI_MODEL": "secret-sentinel"}},
+            {"model": "team/id", "env": {"MODEL": "secret-sentinel"}},
         ]:
             with self.subTest(values=values):
                 result = self.render(values)
@@ -62,8 +62,8 @@ class Models(unittest.TestCase):
 
     def test_unemitted_optional_provider_fields_do_not_collide_with_headers(self):
         for header, env_name in [
-            ("b-base-url", "CHAMVI_PROVIDER_A_HEADER_B_BASE_URL"),
-            ("b-api-key", "CHAMVI_PROVIDER_A_HEADER_B_API_KEY"),
+            ("b-base-url", "PROVIDER_A_HEADER_B_BASE_URL"),
+            ("b-api-key", "PROVIDER_A_HEADER_B_API_KEY"),
         ]:
             with self.subTest(header=header):
                 result = self.render({"providers": {
@@ -86,7 +86,7 @@ class Models(unittest.TestCase):
         for doc in yaml.safe_load_all(result.stdout):
             if doc and doc.get("kind") == "Deployment":
                 env = doc["spec"]["template"]["spec"]["containers"][0]["env"]
-                self.assertFalse(any(item["name"] == "CHAMVI_MODEL" or item["name"].startswith("CHAMVI_PROVIDER_") for item in env))
+                self.assertFalse(any(item["name"] == "MODEL" or item["name"].startswith("PROVIDER_") for item in env))
 
     def test_cron_jobs_share_model_env_and_hook_does_not(self):
         result = self.render({
@@ -107,11 +107,11 @@ class Models(unittest.TestCase):
         cron = next(item for item in resources if item and item.get("kind") == "CronJob")
         for pod in [deployment["spec"]["template"]["spec"], cron["spec"]["jobTemplate"]["spec"]["template"]["spec"]]:
             env = pod["containers"][0]["env"]
-            self.assertIn({"name": "CHAMVI_MODEL", "value": "team/id"}, env)
-            self.assertIn({"name": "CHAMVI_PROVIDER_TEAM_API_KEY", "valueFrom": {"secretKeyRef": {"name": "model-credentials", "key": "api-key"}}}, env)
-            self.assertIn({"name": "CHAMVI_PROVIDER_TEAM_HEADER_X_TEAM", "value": "platform"}, env)
-            self.assertIn({"name": "CHAMVI_PROVIDER_TEAM_HEADER_AUTHORIZATION", "valueFrom": {"secretKeyRef": {"name": "model-credentials", "key": "authorization"}}}, env)
+            self.assertIn({"name": "MODEL", "value": "team/id"}, env)
+            self.assertIn({"name": "PROVIDER_TEAM_API_KEY", "valueFrom": {"secretKeyRef": {"name": "model-credentials", "key": "api-key"}}}, env)
+            self.assertIn({"name": "PROVIDER_TEAM_HEADER_X_TEAM", "value": "platform"}, env)
+            self.assertIn({"name": "PROVIDER_TEAM_HEADER_AUTHORIZATION", "valueFrom": {"secretKeyRef": {"name": "model-credentials", "key": "authorization"}}}, env)
             self.assertEqual(len(env), len({item["name"] for item in env}))
         for item in resources:
             if item and "helm.sh/hook" in item.get("metadata", {}).get("annotations", {}):
-                self.assertNotIn("CHAMVI_MODEL", yaml.safe_dump(item))
+                self.assertNotIn("MODEL", yaml.safe_dump(item))

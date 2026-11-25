@@ -70,26 +70,26 @@ app.kubernetes.io/managed-by: {{ .context.Release.Service | quote }}
 
 {{- define "agent-app.basePath" -}}{{ .Values.basePath }}{{- end -}}
 
-{{/* Only the origin: approvalUrlOf adds CHAMVI_BASE_PATH exactly once. */}}
+{{/* Only the origin: approvalUrlOf adds BASE_PATH exactly once. */}}
 {{- define "agent-app.publicUrl" -}}
 {{- printf "%s://%s" (ternary "https" "http" (ne .Values.ingress.tls.secretName "")) .Values.ingress.host -}}
 {{- end -}}
 
 {{- define "agent-app.ownedEnv" -}}
-{{- $names := list "PORT" "CHAMVI_BASE_PATH" -}}
-{{- if .Values.model -}}{{- $names = append $names "CHAMVI_MODEL" -}}{{- end -}}
+{{- $names := list "PORT" "BASE_PATH" -}}
+{{- if .Values.model -}}{{- $names = append $names "MODEL" -}}{{- end -}}
 {{- range $name, $provider := .Values.providers -}}
-{{- $prefix := printf "CHAMVI_PROVIDER_%s_" ($name | upper | replace "-" "_") -}}
+{{- $prefix := printf "PROVIDER_%s_" ($name | upper | replace "-" "_") -}}
 {{- $names = append $names (printf "%sTYPE" $prefix) -}}
 {{- if $provider.baseURL -}}{{- $names = append $names (printf "%sBASE_URL" $prefix) -}}{{- end -}}
 {{- if $provider.apiKey -}}{{- $names = append $names (printf "%sAPI_KEY" $prefix) -}}{{- end -}}
 {{- range $header, $_ := $provider.headers -}}{{- $names = append $names (printf "%sHEADER_%s" $prefix ($header | upper | replace "-" "_")) -}}{{- end -}}
 {{- end -}}
-{{- if .Values.cronJobs -}}{{- $names = append $names "CHAMVI_SCHEDULER" -}}{{- end -}}
-{{- if .Values.sandbox.enabled -}}{{- $names = append $names "CHAMVI_SANDBOX_NAMESPACE" -}}{{- end -}}
+{{- if .Values.cronJobs -}}{{- $names = append $names "SCHEDULER" -}}{{- end -}}
+{{- if .Values.sandbox.enabled -}}{{- $names = append $names "SANDBOX_NAMESPACE" -}}{{- end -}}
 {{- if and .Values.sandbox.enabled .Values.sandbox.persistence.enabled -}}
-{{- $names = append $names "CHAMVI_SANDBOX_PERSISTENCE" -}}
-{{- if .Values.sandbox.persistence.storageClassName -}}{{- $names = append $names "CHAMVI_SANDBOX_STORAGE_CLASS" -}}{{- end -}}
+{{- $names = append $names "SANDBOX_PERSISTENCE" -}}
+{{- if .Values.sandbox.persistence.storageClassName -}}{{- $names = append $names "SANDBOX_STORAGE_CLASS" -}}{{- end -}}
 {{- end -}}
 {{- toJson $names -}}
 {{- end -}}
@@ -101,11 +101,11 @@ app.kubernetes.io/managed-by: {{ .context.Release.Service | quote }}
 
 {{- define "agent-app.env" -}}
 {{- if .Values.model }}
-- name: CHAMVI_MODEL
+- name: MODEL
   value: {{ .Values.model | quote }}
 {{- end }}
 {{- range $name, $provider := .Values.providers }}
-{{- $prefix := printf "CHAMVI_PROVIDER_%s_" ($name | upper | replace "-" "_") }}
+{{- $prefix := printf "PROVIDER_%s_" ($name | upper | replace "-" "_") }}
 - name: {{ printf "%sTYPE" $prefix }}
   value: {{ $provider.type | quote }}
 {{- if $provider.baseURL }}
@@ -130,36 +130,36 @@ app.kubernetes.io/managed-by: {{ .context.Release.Service | quote }}
 {{- end }}
 - name: PORT
   value: "3000"
-- name: CHAMVI_BASE_PATH
+- name: BASE_PATH
   value: {{ include "agent-app.basePath" . | quote }}
 {{- if .Values.cronJobs }}
-- name: CHAMVI_SCHEDULER
+- name: SCHEDULER
   value: "false"
 {{- end }}
 {{- if .Values.sandbox.enabled }}
-- name: CHAMVI_SANDBOX_NAMESPACE
+- name: SANDBOX_NAMESPACE
   value: {{ .Values.sandbox.namespace | quote }}
 {{- if .Values.sandbox.persistence.enabled }}
-- name: CHAMVI_SANDBOX_PERSISTENCE
+- name: SANDBOX_PERSISTENCE
   value: "true"
 {{- if .Values.sandbox.persistence.storageClassName }}
-- name: CHAMVI_SANDBOX_STORAGE_CLASS
+- name: SANDBOX_STORAGE_CLASS
   value: {{ .Values.sandbox.persistence.storageClassName | quote }}
 {{- end }}
 {{- end }}
 {{- end }}
-{{- $derivePublicUrl := and .Values.ingress.enabled (or (not (hasKey .Values.env "CHAMVI_PUBLIC_URL")) (eq (toString .Values.env.CHAMVI_PUBLIC_URL) "")) }}
+{{- $derivePublicUrl := and .Values.ingress.enabled (or (not (hasKey .Values.env "PUBLIC_URL")) (eq (toString .Values.env.PUBLIC_URL) "")) }}
 {{- if $derivePublicUrl }}
-- name: CHAMVI_PUBLIC_URL
+- name: PUBLIC_URL
   value: {{ include "agent-app.publicUrl" . | quote }}
 {{- end }}
-{{- $deriveDeployment := and .Values.sandbox.enabled (or (not (hasKey .Values.env "CHAMVI_DEPLOYMENT")) (eq (toString .Values.env.CHAMVI_DEPLOYMENT) "")) }}
+{{- $deriveDeployment := and .Values.sandbox.enabled (or (not (hasKey .Values.env "DEPLOYMENT")) (eq (toString .Values.env.DEPLOYMENT) "")) }}
 {{- if $deriveDeployment }}
-- name: CHAMVI_DEPLOYMENT
+- name: DEPLOYMENT
   value: {{ include "agent-app.fullname" . | quote }}
 {{- end }}
 {{- range $key, $value := .Values.env }}
-{{- if not (or (and $derivePublicUrl (eq $key "CHAMVI_PUBLIC_URL")) (and $deriveDeployment (eq $key "CHAMVI_DEPLOYMENT"))) }}
+{{- if not (or (and $derivePublicUrl (eq $key "PUBLIC_URL")) (and $deriveDeployment (eq $key "DEPLOYMENT"))) }}
 - name: {{ $key | quote }}
   value: {{ include "agent-app.scalar" $value | quote }}
 {{- end }}

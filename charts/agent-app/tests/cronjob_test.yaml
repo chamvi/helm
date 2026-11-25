@@ -55,7 +55,7 @@ tests:
   - it: turns the in-process scheduler off on the Deployment
     template: templates/deployment.yaml
     asserts:
-      - contains: { path: 'spec.template.spec.containers[0].env', content: { name: CHAMVI_SCHEDULER, value: "false" } }
+      - contains: { path: 'spec.template.spec.containers[0].env', content: { name: SCHEDULER, value: "false" } }
   - it: keeps CronJob names within 52 characters
     template: templates/cronjob.yaml
     release:

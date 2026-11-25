@@ -16,16 +16,16 @@ tests:
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env
-          content: {name: CHAMVI_MODEL, value: team-a/model-id}
+          content: {name: MODEL, value: team-a/model-id}
       - contains:
           path: spec.template.spec.containers[0].env
-          content: {name: CHAMVI_PROVIDER_TEAM_A_TYPE, value: anthropic}
+          content: {name: PROVIDER_TEAM_A_TYPE, value: anthropic}
       - contains:
           path: spec.template.spec.containers[0].env
-          content: {name: CHAMVI_PROVIDER_TEAM_A_BASE_URL, value: 'https://models.example.test/api'}
+          content: {name: PROVIDER_TEAM_A_BASE_URL, value: 'https://models.example.test/api'}
       - contains:
           path: spec.template.spec.containers[0].env
           content:
-            name: CHAMVI_PROVIDER_TEAM_A_API_KEY
+            name: PROVIDER_TEAM_A_API_KEY
             valueFrom:
               secretKeyRef: {name: model-credentials, key: api-key}
