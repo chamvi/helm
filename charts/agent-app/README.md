@@ -358,8 +358,9 @@ that issued the highest token makes a fenced writer (a knowledge collection) ref
 up. See [Upgrading to 0.10](https://chamvi.dev/guide/upgrading#upgrading-to-0-10).
 
 chamvi 0.11 ships one store migration (`LimitUses1795552285096`). It only adds the table `chamvi_limit_uses`, which
-an old process never reads, so 0.10 to 0.11 can run without the steps above; until the old pods are gone, tool calls
-they run are not counted against the new per-tool limits. Paths now match in their exact case (the chart's probes
+an old process never reads, so 0.10 to 0.11 needs none of the downtime steps above. With `CHAMVI_MIGRATE=false`, run
+`chamvi migrate` with the new image before it starts. Until the old pods are gone, tool calls they run are not counted
+against the new per-tool limits. Paths now match in their exact case (the chart's probes
 already use lower case), and `AUTHUP_CLIENT_ID` defaults to `chamvi-server` with a new `AUTHUP_REALM` (default
 `master`). With `AUTHUP_URL` set the dashboard offers the authup login as the public client `chamvi`. An app that
 pinned `ioredis` in `overrides` can drop it. See
